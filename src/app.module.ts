@@ -40,6 +40,7 @@ import { WorkScheduleModule } from './work-schedule/work-schedule.module';
         username: config.get('database.username'),
         password: config.get('database.password'),
         database: config.get('database.name'),
+        ssl: process.env.DB_SSL === 'true' ? { rejectUnauthorized: false } : false,
         entities: [User, Appointment, Service, TimeSlot, WorkSchedule, Faq, ClinicSettings, Review],
         synchronize: true,
         logging: config.get('nodeEnv') === 'development',

@@ -63,12 +63,17 @@ export class AdminUpdate implements OnModuleInit {
 
   private async refreshAdminCache() {
     const configIds = this.configService.get<number[]>('bot.adminIds') || [];
-    const dbAdmins = await this.usersService.findAdmins();
-    this.adminCache = new Set([...configIds, ...dbAdmins.map((u) => u.telegramId)]);
+    try {
+      const dbAdmins = await this.usersService.findAdmins();
+      this.adminCache = new Set([...configIds, ...dbAdmins.map((u) => u.telegramId)]);
+    } catch {
+      this.adminCache = new Set(configIds);
+    }
   }
 
   private isAdmin(userId: number): boolean {
-    return this.adminCache.has(userId);
+    const configIds = this.configService.get<number[]>('bot.adminIds') || [];
+    return this.adminCache.has(userId) || configIds.includes(userId);
   }
 
   // ── Asosiy menyu ─────────────────────────────────────────────────
