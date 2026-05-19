@@ -5,6 +5,8 @@ import { Markup, Telegraf } from 'telegraf';
 import { ConfigService } from '@nestjs/config';
 import { AppointmentsService } from '../appointments/appointments.service';
 import { fmtTime } from '../bot/keyboards/calendar.keyboard';
+import * as https from 'https';
+import * as http from 'http';
 
 @Injectable()
 export class NotificationsService {
@@ -15,6 +17,16 @@ export class NotificationsService {
     private readonly appointmentsService: AppointmentsService,
     private readonly configService: ConfigService,
   ) {}
+
+  // Har 10 daqiqada o'ziga ping — Render free tier uyquga ketmasin
+  @Cron('*/10 * * * *')
+  keepAlive() {
+    const appUrl = this.configService.get<string>('app.url');
+    if (!appUrl) return;
+    const url = `${appUrl}/health`;
+    const client = url.startsWith('https') ? https : http;
+    client.get(url, () => {}).on('error', () => {});
+  }
 
   // Har kuni soat 09:00 da — ertangi qabullar uchun eslatma
   @Cron('0 9 * * *')

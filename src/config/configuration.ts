@@ -22,4 +22,7 @@ export default () => ({
     port: parseInt(process.env.WEBHOOK_PORT, 10) || 3000,
   },
   nodeEnv: process.env.NODE_ENV || 'development',
+  app: {
+    url: process.env.APP_URL || '',
+  },
 });
