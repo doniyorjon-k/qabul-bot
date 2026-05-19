@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
+import { AppController } from './app.controller';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { TelegrafModule } from 'nestjs-telegraf';
 import { ScheduleModule } from '@nestjs/schedule';
@@ -24,6 +25,7 @@ import { NotificationsModule } from './notifications/notifications.module';
 import { WorkScheduleModule } from './work-schedule/work-schedule.module';
 
 @Module({
+  controllers: [AppController],
   imports: [
     ConfigModule.forRoot({
       load: [configuration],
@@ -50,9 +52,24 @@ import { WorkScheduleModule } from './work-schedule/work-schedule.module';
 
     TelegrafModule.forRootAsync({
       imports: [ConfigModule],
-      useFactory: (config: ConfigService) => ({
-        token: config.get<string>('bot.token'),
-      }),
+      useFactory: (config: ConfigService) => {
+        const token = config.get<string>('bot.token');
+        const webhookUrl = config.get<string>('webhook.url');
+
+        if (webhookUrl) {
+          return {
+            token,
+            launchOptions: {
+              webhook: {
+                domain: webhookUrl,
+                hookPath: '/webhook',
+              },
+            },
+          };
+        }
+
+        return { token };
+      },
       inject: [ConfigService],
     }),
 
