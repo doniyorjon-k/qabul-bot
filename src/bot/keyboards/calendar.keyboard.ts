@@ -25,8 +25,8 @@ function isWorkingDay(date: Date, dateStr: string, schedule?: ScheduleInfo): boo
 }
 
 export function buildCalendarKeyboard(year: number, month: number, schedule?: ScheduleInfo) {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
+  const todayUz = uzNow();
+  const today = new Date(Date.UTC(todayUz.getUTCFullYear(), todayUz.getUTCMonth(), todayUz.getUTCDate()));
 
   const firstDay = new Date(year, month, 1);
   const lastDay = new Date(year, month + 1, 0);
@@ -93,14 +93,23 @@ export function buildCalendarKeyboard(year: number, month: number, schedule?: Sc
   return Markup.inlineKeyboard(rows);
 }
 
+function uzNow(): Date {
+  return new Date(Date.now() + 5 * 60 * 60 * 1000);
+}
+
+function uzTodayStr(): string {
+  const d = uzNow();
+  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-${String(d.getUTCDate()).padStart(2, '0')}`;
+}
+
 export function buildTimeKeyboard(
   slots: { time: string; id: number; isBooked: boolean }[],
   selectedDate?: string,
 ) {
-  const now = new Date();
-  const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+  const now = uzNow();
+  const todayStr = uzTodayStr();
   const isToday = selectedDate === todayStr;
-  const nowMinutes = isToday ? now.getHours() * 60 + now.getMinutes() : -1;
+  const nowMinutes = isToday ? now.getUTCHours() * 60 + now.getUTCMinutes() : -1;
 
   const visibleSlots = isToday
     ? slots.filter((s) => {

@@ -475,10 +475,10 @@ export class BotUpdate {
       return;
     }
 
-    const now = new Date();
-    const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    const uzNow = new Date(Date.now() + 5 * 60 * 60 * 1000);
+    const todayStr = `${uzNow.getUTCFullYear()}-${String(uzNow.getUTCMonth() + 1).padStart(2, '0')}-${String(uzNow.getUTCDate()).padStart(2, '0')}`;
     const isToday = date === todayStr;
-    const nowMinutes = isToday ? now.getHours() * 60 + now.getMinutes() : -1;
+    const nowMinutes = isToday ? uzNow.getUTCHours() * 60 + uzNow.getUTCMinutes() : -1;
     const availableCount = slots.filter((s) => {
       if (s.isBooked) return false;
       if (!isToday) return true;
