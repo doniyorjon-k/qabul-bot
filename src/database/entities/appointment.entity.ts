@@ -53,6 +53,9 @@ export class Appointment {
   reminder2HourSent: boolean;
 
   @Column({ default: false })
+  reminder10MinSent: boolean;
+
+  @Column({ default: false })
   reviewRequestSent: boolean;
 
   @Column({ type: 'text', nullable: true })

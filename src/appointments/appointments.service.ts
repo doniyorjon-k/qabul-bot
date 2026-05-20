@@ -132,6 +132,32 @@ export class AppointmentsService {
     await this.appointmentsRepo.update(id, { reminder2HourSent: true });
   }
 
+  async getPendingReminders10Min(): Promise<Appointment[]> {
+    const now = new Date();
+    const in10Min = new Date(now.getTime() + 10 * 60 * 1000);
+    const uzNow = new Date(now.getTime() + 5 * 60 * 60 * 1000);
+    const todayStr = uzNow.toISOString().split('T')[0];
+
+    const candidates = await this.appointmentsRepo.find({
+      where: {
+        status: AppointmentStatus.CONFIRMED,
+        reminder10MinSent: false,
+        reminder2HourSent: false,
+        timeSlot: { date: todayStr },
+      },
+      relations: ['user', 'service', 'timeSlot'],
+    });
+
+    return candidates.filter((apt) => {
+      const aptTime = new Date(`${apt.timeSlot.date}T${apt.timeSlot.time}:00+05:00`);
+      return aptTime > now && aptTime <= in10Min;
+    });
+  }
+
+  async markReminder10MinSent(id: number): Promise<void> {
+    await this.appointmentsRepo.update(id, { reminder10MinSent: true });
+  }
+
   async getPendingReviewRequests(): Promise<Appointment[]> {
     const now = new Date();
     const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);

@@ -73,6 +73,25 @@ export class NotificationsService {
     }
   }
 
+  // Har 5 daqiqada — qabuldan 30 daqiqa ichida yozilganlar uchun 10 daqiqalik eslatma
+  @Cron('*/5 * * * *')
+  async send10MinReminders() {
+    const appointments = await this.appointmentsService.getPendingReminders10Min();
+
+    for (const apt of appointments) {
+      try {
+        await this.bot.telegram.sendMessage(
+          apt.user.telegramId,
+          `⏰ *10 daqiqadan keyin qabulingiz!*\n\n🦷 Xizmat: ${apt.service.name}\n⏰ Soat: *${fmtTime(apt.timeSlot.time)}*\n\nKechikib qolmang! 🏃`,
+          { parse_mode: 'Markdown' },
+        );
+        await this.appointmentsService.markReminder10MinSent(apt.id);
+      } catch (err) {
+        this.logger.error(`10 daqiqalik eslatmada xato: ${err.message}`);
+      }
+    }
+  }
+
   // Har 30 daqiqada — qabul tugagandan 2 soat o'tgach baholash so'rovi
   @Cron('*/30 * * * *')
   async sendReviewRequests() {
