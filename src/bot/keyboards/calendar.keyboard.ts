@@ -63,10 +63,10 @@ export function buildCalendarKeyboard(year: number, month: number, schedule?: Sc
       label = String(day);
       cb = 'cal:ignore';
     } else if (working) {
-      label = `${day} 🟢`;   // ish kuni — bosiladi
+      label = `🟢${day}`;   // ish kuni — bosiladi
       cb = `cal:select:${dateStr}`;
     } else {
-      label = `${day} 🔴`;   // dam olish — bosilmaydi
+      label = `🔴${day}`;   // dam olish — bosilmaydi
       cb = 'cal:ignore';
     }
 
