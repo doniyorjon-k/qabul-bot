@@ -532,11 +532,21 @@ export class AdminUpdate implements OnModuleInit {
       return;
     }
 
+    const now = new Date();
     let text = `📋 *Bugungi qabullar:*\n\n`;
     for (const a of list) {
       text += `🕐 *${a.timeSlot.time}* — ${a.service.name}\n👤 ${a.clientName} | 📱 ${a.clientPhone}\n\n`;
     }
-    const cancelBtns = list.map((a) => Markup.button.callback(`❌ ${fmtTime(a.timeSlot.time)} bekor`, `adm:cancel:${a.id}`));
+    const cancelBtns = list.map((a) => {
+      const aptTime = new Date(`${a.timeSlot.date}T${a.timeSlot.time}:00+05:00`);
+      const msLeft = aptTime.getTime() - now.getTime();
+      if (msLeft <= 0) {
+        return Markup.button.callback(`✅ ${fmtTime(a.timeSlot.time)} yakunlandi`, 'adm:noop');
+      } else if (msLeft <= 30 * 60 * 1000) {
+        return Markup.button.callback(`⏳ ${fmtTime(a.timeSlot.time)} (30 daq qoldi)`, 'adm:noop');
+      }
+      return Markup.button.callback(`❌ ${fmtTime(a.timeSlot.time)} bekor`, `adm:cancel:${a.id}`);
+    });
     const btns: any[][] = [];
     for (let i = 0; i < cancelBtns.length; i += 2) {
       btns.push(cancelBtns.slice(i, i + 2));
@@ -628,6 +638,11 @@ export class AdminUpdate implements OnModuleInit {
     );
   }
 
+  @Action('adm:noop')
+  async onAdmNoop(@Ctx() ctx: Context) {
+    await ctx.answerCbQuery();
+  }
+
   // ── Qabulni bekor qilish ──────────────────────────────────────────
   @Action(/^adm:cancel:(\d+)$/)
   async onCancelAppointment(@Ctx() ctx: Context) {
@@ -636,6 +651,19 @@ export class AdminUpdate implements OnModuleInit {
     const id = parseInt((ctx as any).match[1]);
     const apt = await this.appointmentsService.findById(id);
     if (!apt) { await ctx.answerCbQuery('Topilmadi', { show_alert: true }); return; }
+
+    const now = new Date();
+    const aptTime = new Date(`${apt.timeSlot.date}T${apt.timeSlot.time}:00+05:00`);
+    const msLeft = aptTime.getTime() - now.getTime();
+    if (msLeft <= 0) {
+      await ctx.answerCbQuery('Qabul allaqachon yakunlangan!', { show_alert: true });
+      return;
+    }
+    if (msLeft <= 30 * 60 * 1000) {
+      await ctx.answerCbQuery('Qabulga 30 daqiqadan kam vaqt qoldi, bekor qilib bo\'lmaydi!', { show_alert: true });
+      return;
+    }
+
     await this.appointmentsService.cancel(id);
     if (apt.timeSlot) await this.timeSlotsService.freeSlot(apt.timeSlot.id);
     try {
