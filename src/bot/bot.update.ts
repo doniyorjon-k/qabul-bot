@@ -285,7 +285,7 @@ export class BotUpdate {
 
     const rows: any[][] = [];
     if (isPast) {
-      rows.push([Markup.button.callback('✅ Qabul tugagan', 'myapt:noop')]);
+      rows.push([Markup.button.callback('✅ Qabul tugagan', 'myapt:done')]);
     } else if (canCancel) {
       rows.push([Markup.button.callback('❌ Bekor qilish', `myapt:cancel:${apt.id}`)]);
     } else {
@@ -325,6 +325,11 @@ export class BotUpdate {
   @Action('myapt:noop')
   async onMyAptNoop(@Ctx() ctx: Context) {
     await ctx.answerCbQuery('Qabulga 2 soatdan kam vaqt qoldi!', { show_alert: true });
+  }
+
+  @Action('myapt:done')
+  async onMyAptDone(@Ctx() ctx: Context) {
+    await ctx.answerCbQuery('✅ Qabul tugagan. Tashrifingiz uchun rahmat!', { show_alert: true });
   }
 
   @Action(/^myapt:cancel:(\d+)$/)
