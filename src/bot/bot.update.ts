@@ -276,15 +276,17 @@ export class BotUpdate {
 
     const [y, mo, d] = apt.timeSlot.date.split('-');
     const now = new Date();
-    const aptDateTime = new Date(apt.timeSlot.date);
-    const [h, m] = apt.timeSlot.time.split(':').map(Number);
-    aptDateTime.setHours(h, m, 0, 0);
-    const canCancel = aptDateTime.getTime() - now.getTime() > 2 * 60 * 60 * 1000;
+    const aptDateTime = new Date(`${apt.timeSlot.date}T${apt.timeSlot.time}:00+05:00`);
+    const msLeft = aptDateTime.getTime() - now.getTime();
+    const isPast = msLeft <= 0;
+    const canCancel = msLeft > 2 * 60 * 60 * 1000;
 
     const text = `📋 *Qabul ma'lumotlari:*\n\n🦷 Xizmat: ${apt.service.name}\n📅 ${d}.${mo}.${y} soat ${fmtTime(apt.timeSlot.time)}\n👤 ${apt.clientName}\n📱 ${apt.clientPhone}`;
 
     const rows: any[][] = [];
-    if (canCancel) {
+    if (isPast) {
+      rows.push([Markup.button.callback('✅ Qabul tugagan', 'myapt:noop')]);
+    } else if (canCancel) {
       rows.push([Markup.button.callback('❌ Bekor qilish', `myapt:cancel:${apt.id}`)]);
     } else {
       rows.push([Markup.button.callback('⚠️ 2 soat qoldi, bekor qilib bo\'lmaydi', 'myapt:noop')]);
@@ -333,9 +335,7 @@ export class BotUpdate {
     if (!apt || apt.user.telegramId !== ctx.from.id) return;
 
     const now = new Date();
-    const aptDateTime = new Date(apt.timeSlot.date);
-    const [h, m] = apt.timeSlot.time.split(':').map(Number);
-    aptDateTime.setHours(h, m, 0, 0);
+    const aptDateTime = new Date(`${apt.timeSlot.date}T${apt.timeSlot.time}:00+05:00`);
 
     if (aptDateTime.getTime() - now.getTime() <= 2 * 60 * 60 * 1000) {
       await ctx.answerCbQuery('Qabulga 2 soatdan kam vaqt qoldi, bekor qilib bo\'lmaydi!', { show_alert: true });
@@ -610,9 +610,7 @@ export class BotUpdate {
       const apt = await this.appointmentsService.findById(aptId);
       if (apt && apt.user.telegramId === userId) {
         const now = new Date();
-        const aptDateTime = new Date(apt.timeSlot.date);
-        const [hh, mm] = apt.timeSlot.time.split(':').map(Number);
-        aptDateTime.setHours(hh, mm, 0, 0);
+        const aptDateTime = new Date(`${apt.timeSlot.date}T${apt.timeSlot.time}:00+05:00`);
 
         if (aptDateTime.getTime() - now.getTime() <= 2 * 60 * 60 * 1000) {
           this.clearSession(userId);

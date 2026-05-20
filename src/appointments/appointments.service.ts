@@ -148,9 +148,7 @@ export class AppointmentsService {
     return candidates.filter((apt) => {
       if (!apt.timeSlot?.date || !apt.timeSlot?.time) return false;
       if (apt.timeSlot.date < sevenDaysAgoStr) return false;
-      const [h, m] = apt.timeSlot.time.split(':').map(Number);
-      const aptDate = new Date(apt.timeSlot.date);
-      aptDate.setHours(h, m, 0, 0);
+      const aptDate = new Date(`${apt.timeSlot.date}T${apt.timeSlot.time}:00+05:00`);
       return now.getTime() - aptDate.getTime() >= 2 * 60 * 60 * 1000;
     });
   }
