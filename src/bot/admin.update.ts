@@ -510,6 +510,21 @@ export class AdminUpdate implements OnModuleInit {
     if (!this.isAdmin(ctx.from.id)) return;
 
     const id = parseInt((ctx as any).match[1]);
+    const apt = await this.appointmentsService.findById(id);
+    if (!apt) { await ctx.answerCbQuery('Topilmadi', { show_alert: true }); return; }
+
+    const now = new Date();
+    const aptTime = new Date(`${apt.timeSlot.date}T${apt.timeSlot.time}:00+05:00`);
+    const msLeft = aptTime.getTime() - now.getTime();
+    if (msLeft <= 0) {
+      await ctx.answerCbQuery('Qabul allaqachon yakunlangan!', { show_alert: true });
+      return;
+    }
+    if (msLeft <= 30 * 60 * 1000) {
+      await ctx.answerCbQuery('Qabulga 30 daqiqadan kam vaqt qoldi, bekor qilib bo\'lmaydi!', { show_alert: true });
+      return;
+    }
+
     adminSessions.set(ctx.from.id, { step: 'apt:reject', rejectAptId: id });
 
     await ctx.editMessageText(
@@ -615,10 +630,23 @@ export class AdminUpdate implements OnModuleInit {
       `👤 ${apt.clientName}\n` +
       `📱 ${apt.clientPhone}`;
 
+    const now = new Date();
+    const aptTime = new Date(`${apt.timeSlot.date}T${apt.timeSlot.time}:00+05:00`);
+    const msLeft = aptTime.getTime() - now.getTime();
+
+    let actionBtn: any;
+    if (msLeft <= 0) {
+      actionBtn = Markup.button.callback('✅ Qabul yakunlangan', 'adm:noop');
+    } else if (msLeft <= 30 * 60 * 1000) {
+      actionBtn = Markup.button.callback('⏳ 30 daqiqadan kam qoldi', 'adm:noop');
+    } else {
+      actionBtn = Markup.button.callback('❌ Bekor qilish', `adm:apt:rej:${apt.id}`);
+    }
+
     await ctx.editMessageText(text, {
       parse_mode: 'Markdown',
       ...Markup.inlineKeyboard([
-        [Markup.button.callback('❌ Bekor qilish', `adm:apt:rej:${apt.id}`), Markup.button.callback('⬅️ Jadvalga qaytish', 'adm:week')],
+        [actionBtn, Markup.button.callback('⬅️ Jadvalga qaytish', 'adm:week')],
       ]),
     });
   }
