@@ -253,10 +253,13 @@ export class BotUpdate {
       return;
     }
 
+    const now = new Date();
     const rows = apts.map((a) => {
       const [y, mo, d] = a.timeSlot.date.split('-');
+      const aptTime = new Date(`${a.timeSlot.date}T${a.timeSlot.time}:00+05:00`);
+      const icon = aptTime <= now ? '✅' : '📅';
       return [Markup.button.callback(
-        `📅 ${d}.${mo}.${y} ${fmtTime(a.timeSlot.time)} — ${a.service.name}`,
+        `${icon} ${d}.${mo}.${y} ${fmtTime(a.timeSlot.time)} — ${a.service.name}`,
         `myapt:${a.id}`,
       )];
     });
@@ -308,10 +311,13 @@ export class BotUpdate {
       return;
     }
 
+    const now = new Date();
     const rows = apts.map((a) => {
       const [y, mo, d] = a.timeSlot.date.split('-');
+      const aptTime = new Date(`${a.timeSlot.date}T${a.timeSlot.time}:00+05:00`);
+      const icon = aptTime <= now ? '✅' : '📅';
       return [Markup.button.callback(
-        `📅 ${d}.${mo}.${y} ${fmtTime(a.timeSlot.time)} — ${a.service.name}`,
+        `${icon} ${d}.${mo}.${y} ${fmtTime(a.timeSlot.time)} — ${a.service.name}`,
         `myapt:${a.id}`,
       )];
     });

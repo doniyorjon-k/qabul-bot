@@ -65,16 +65,16 @@ export class AppointmentsService {
   }
 
   async findUpcomingByUser(userId: number): Promise<Appointment[]> {
-    const today = uzDateStr(uzNow());
     return this.appointmentsRepo
       .createQueryBuilder('apt')
       .leftJoinAndSelect('apt.service', 'service')
       .leftJoinAndSelect('apt.timeSlot', 'slot')
       .where('apt.user_id = :userId', { userId })
-      .andWhere('apt.status IN (:...statuses)', { statuses: [AppointmentStatus.PENDING, AppointmentStatus.CONFIRMED] })
-      .andWhere('slot.date >= :today', { today })
-      .orderBy('slot.date', 'ASC')
-      .addOrderBy('slot.time', 'ASC')
+      .andWhere('apt.status IN (:...statuses)', {
+        statuses: [AppointmentStatus.PENDING, AppointmentStatus.CONFIRMED, AppointmentStatus.COMPLETED],
+      })
+      .orderBy('slot.date', 'DESC')
+      .addOrderBy('slot.time', 'DESC')
       .getMany();
   }
 
