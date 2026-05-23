@@ -114,7 +114,7 @@ export function buildTimeKeyboard(
   const visibleSlots = isToday
     ? slots.filter((s) => {
         const [h, m] = s.time.split(':').map(Number);
-        return h * 60 + m > nowMinutes;
+        return h * 60 + m > nowMinutes + 150; // kamida 2.5 soat keyin
       })
     : slots;
 

@@ -28,8 +28,8 @@ export class NotificationsService {
     client.get(url, () => {}).on('error', () => {});
   }
 
-  // Har kuni soat 09:00 da — ertangi qabullar uchun eslatma
-  @Cron('0 9 * * *')
+  // Har kuni soat 09:00 UZ (04:00 UTC) da — ertangi qabullar uchun eslatma
+  @Cron('0 4 * * *')
   async sendDayBeforeReminders() {
     this.logger.log('1 kun oldingi eslatmalar yuborilmoqda...');
     const appointments = await this.appointmentsService.getPendingReminders1Day();

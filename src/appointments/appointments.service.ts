@@ -3,6 +3,14 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Appointment, AppointmentStatus } from '../database/entities/appointment.entity';
 
+function uzNow(): Date {
+  return new Date(Date.now() + 5 * 60 * 60 * 1000);
+}
+
+function uzDateStr(d: Date): string {
+  return d.toISOString().split('T')[0];
+}
+
 @Injectable()
 export class AppointmentsService {
   constructor(
@@ -31,7 +39,7 @@ export class AppointmentsService {
   }
 
   async findTodayAppointments(): Promise<Appointment[]> {
-    const today = new Date().toISOString().split('T')[0];
+    const today = uzDateStr(uzNow());
     return this.appointmentsRepo.find({
       where: {
         timeSlot: { date: today },
@@ -57,7 +65,7 @@ export class AppointmentsService {
   }
 
   async findUpcomingByUser(userId: number): Promise<Appointment[]> {
-    const today = new Date().toISOString().split('T')[0];
+    const today = uzDateStr(uzNow());
     return this.appointmentsRepo
       .createQueryBuilder('apt')
       .leftJoinAndSelect('apt.service', 'service')
@@ -94,9 +102,8 @@ export class AppointmentsService {
   }
 
   async getPendingReminders1Day(): Promise<Appointment[]> {
-    const tomorrow = new Date();
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    const tomorrowStr = tomorrow.toISOString().split('T')[0];
+    const tomorrowUz = new Date(uzNow().getTime() + 24 * 60 * 60 * 1000);
+    const tomorrowStr = uzDateStr(tomorrowUz);
 
     return this.appointmentsRepo.find({
       where: {
@@ -109,10 +116,10 @@ export class AppointmentsService {
   }
 
   async getPendingReminders2Hours(): Promise<Appointment[]> {
-    const now = new Date();
-    const in2Hours = new Date(now.getTime() + 2 * 60 * 60 * 1000);
-    const todayStr = now.toISOString().split('T')[0];
-    const timeStr = `${String(in2Hours.getHours()).padStart(2, '0')}:${String(in2Hours.getMinutes()).padStart(2, '0')}`;
+    const nowUz = uzNow();
+    const in2HoursUz = new Date(nowUz.getTime() + 2 * 60 * 60 * 1000);
+    const todayStr = uzDateStr(nowUz);
+    const timeStr = `${String(in2HoursUz.getUTCHours()).padStart(2, '0')}:${String(in2HoursUz.getUTCMinutes()).padStart(2, '0')}`;
 
     return this.appointmentsRepo.find({
       where: {
@@ -135,8 +142,7 @@ export class AppointmentsService {
   async getPendingReminders10Min(): Promise<Appointment[]> {
     const now = new Date();
     const in10Min = new Date(now.getTime() + 10 * 60 * 1000);
-    const uzNow = new Date(now.getTime() + 5 * 60 * 60 * 1000);
-    const todayStr = uzNow.toISOString().split('T')[0];
+    const todayStr = uzDateStr(uzNow());
 
     const candidates = await this.appointmentsRepo.find({
       where: {
