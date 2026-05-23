@@ -14,6 +14,7 @@ import { Faq } from './database/entities/faq.entity';
 import { ClinicSettings } from './database/entities/clinic-settings.entity';
 import { Review } from './database/entities/review.entity';
 import { BotModule } from './bot/bot.module';
+import { AdminApiModule } from './admin-api/admin-api.module';
 import { FaqModule } from './faq/faq.module';
 import { ClinicSettingsModule } from './clinic-settings/clinic-settings.module';
 import { ReviewsModule } from './reviews/reviews.module';
@@ -76,6 +77,7 @@ import { WorkScheduleModule } from './work-schedule/work-schedule.module';
     ScheduleModule.forRoot(),
 
     BotModule,
+    AdminApiModule,
     UsersModule,
     ServicesModule,
     AppointmentsModule,

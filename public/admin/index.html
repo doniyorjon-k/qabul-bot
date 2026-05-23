@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+  <title>Admin Panel</title>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    :root {
+      --tg-bg: var(--tg-theme-bg-color, #1c1c1e);
+      --tg-secondary: var(--tg-theme-secondary-bg-color, #2c2c2e);
+      --tg-text: var(--tg-theme-text-color, #ffffff);
+      --tg-hint: var(--tg-theme-hint-color, #8e8e93);
+      --tg-button: var(--tg-theme-button-color, #007aff);
+      --tg-button-text: var(--tg-theme-button-text-color, #ffffff);
+      --tg-destructive: var(--tg-theme-destructive-text-color, #ff3b30);
+    }
+    body { background: var(--tg-bg); color: var(--tg-text); font-family: -apple-system, sans-serif; }
+    .card { background: var(--tg-secondary); border-radius: 12px; }
+    .tab-active { color: var(--tg-button) !important; }
+    .tab-active svg { stroke: var(--tg-button) !important; }
+    .hint { color: var(--tg-hint); }
+    .btn-primary { background: var(--tg-button); color: var(--tg-button-text); }
+    .btn-danger { background: var(--tg-destructive); color: #fff; }
+    .badge-pending { background: #ff9500; }
+    .badge-confirmed { background: #34c759; }
+    .badge-done { background: #636366; }
+    .section { display: none; }
+    .section.active { display: block; }
+    .spinner { border: 2px solid var(--tg-secondary); border-top-color: var(--tg-button); border-radius: 50%; width: 28px; height: 28px; animation: spin .7s linear infinite; margin: 40px auto; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.6); display: flex; align-items: flex-end; z-index: 50; }
+    .modal-box { background: var(--tg-secondary); border-radius: 16px 16px 0 0; width: 100%; padding: 20px; }
+  </style>
+</head>
+<body class="pb-20">
+
+  <!-- Header -->
+  <div class="sticky top-0 z-10 px-4 py-3 flex items-center gap-2" style="background:var(--tg-bg)">
+    <span class="text-lg font-semibold">👨‍⚕️ Admin panel</span>
+    <span id="pending-badge" class="hidden ml-auto text-xs font-bold badge-pending text-white px-2 py-0.5 rounded-full"></span>
+  </div>
+
+  <!-- Sections -->
+  <div class="px-4">
+
+    <!-- BUGUN -->
+    <div id="sec-today" class="section active">
+      <div id="today-content"><div class="spinner"></div></div>
+    </div>
+
+    <!-- KUTILMOQDA -->
+    <div id="sec-pending" class="section">
+      <div id="pending-content"><div class="spinner"></div></div>
+    </div>
+
+    <!-- HAFTA -->
+    <div id="sec-week" class="section">
+      <div id="week-content"><div class="spinner"></div></div>
+    </div>
+
+    <!-- STATISTIKA -->
+    <div id="sec-stats" class="section">
+      <div id="stats-content"><div class="spinner"></div></div>
+    </div>
+
+  </div>
+
+  <!-- Cancel Modal -->
+  <div id="cancel-modal" class="modal-overlay hidden">
+    <div class="modal-box">
+      <p class="font-semibold mb-3">Bekor qilish sababi</p>
+      <textarea id="cancel-reason" rows="3" placeholder="Sabab (ixtiyoriy)..."
+        class="w-full rounded-lg px-3 py-2 text-sm outline-none resize-none"
+        style="background:var(--tg-bg);color:var(--tg-text);border:1px solid var(--tg-hint)"></textarea>
+      <div class="flex gap-2 mt-3">
+        <button onclick="closeModal()" class="flex-1 py-2 rounded-lg text-sm hint" style="background:var(--tg-bg)">Bekor</button>
+        <button onclick="confirmCancel()" class="flex-1 py-2 rounded-lg text-sm font-semibold btn-danger">Qabulni bekor qil</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tab Bar -->
+  <nav class="fixed bottom-0 left-0 right-0 flex border-t" style="background:var(--tg-secondary);border-color:rgba(142,142,147,.3)">
+    <button onclick="switchTab('today')" id="tab-today" class="tab flex-1 flex flex-col items-center py-2 gap-0.5 tab-active">
+      <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+      <span class="text-xs">Bugun</span>
+    </button>
+    <button onclick="switchTab('pending')" id="tab-pending" class="tab flex-1 flex flex-col items-center py-2 gap-0.5 hint">
+      <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+      <span class="text-xs">Kutilmoqda</span>
+    </button>
+    <button onclick="switchTab('week')" id="tab-week" class="tab flex-1 flex flex-col items-center py-2 gap-0.5 hint">
+      <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18M8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01"/></svg>
+      <span class="text-xs">Hafta</span>
+    </button>
+    <button onclick="switchTab('stats')" id="tab-stats" class="tab flex-1 flex flex-col items-center py-2 gap-0.5 hint">
+      <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M18 20V10M12 20V4M6 20v-6"/></svg>
+      <span class="text-xs">Statistika</span>
+    </button>
+  </nav>
+
+<script>
+const tg = window.Telegram.WebApp;
+tg.ready();
+tg.expand();
+
+const initData = tg.initData;
+const API = '';
+
+// ── helpers ──────────────────────────────────────────────────────────
+function api(path, opts = {}) {
+  return fetch(API + '/api/admin' + path, {
+    ...opts,
+    headers: { 'x-init-data': initData, 'Content-Type': 'application/json', ...(opts.headers || {}) },
+  }).then(async r => {
+    if (!r.ok) {
+      const err = await r.json().catch(() => ({ message: r.statusText }));
+      throw new Error(err.message || 'Xato');
+    }
+    return r.json();
+  });
+}
+
+function fmtDate(str) {
+  if (!str) return '';
+  const [y, m, d] = str.split('-');
+  return `${d}.${m}.${y}`;
+}
+
+function fmtTime(t) {
+  if (!t) return '';
+  const [h, m] = t.split(':');
+  return m === '00' ? `${+h}:00` : `${+h}:${m}`;
+}
+
+function isPast(date, time) {
+  return new Date(`${date}T${time}:00+05:00`) <= new Date();
+}
+
+function cannotCancel(date, time) {
+  const ms = new Date(`${date}T${time}:00+05:00`) - new Date();
+  return ms <= 30 * 60 * 1000;
+}
+
+function toast(msg, ok = true) {
+  tg.showAlert ? tg.showAlert(msg) : alert(msg);
+}
+
+// ── cancel modal ─────────────────────────────────────────────────────
+let cancelAptId = null;
+
+function openCancelModal(id) {
+  cancelAptId = id;
+  document.getElementById('cancel-reason').value = '';
+  document.getElementById('cancel-modal').classList.remove('hidden');
+}
+
+function closeModal() {
+  document.getElementById('cancel-modal').classList.add('hidden');
+  cancelAptId = null;
+}
+
+async function confirmCancel() {
+  if (!cancelAptId) return;
+  const reason = document.getElementById('cancel-reason').value.trim();
+  try {
+    await api(`/appointments/${cancelAptId}/cancel`, {
+      method: 'POST',
+      body: JSON.stringify({ reason }),
+    });
+    closeModal();
+    toast('✅ Qabul bekor qilindi');
+    loadCurrentTab();
+  } catch (e) {
+    toast('❌ ' + e.message);
+  }
+}
+
+// ── apt card ─────────────────────────────────────────────────────────
+function aptCard(a, opts = {}) {
+  const past = isPast(a.timeSlot.date, a.timeSlot.time);
+  const cantCancel = cannotCancel(a.timeSlot.date, a.timeSlot.time);
+  const statusColor = past ? 'badge-done' : (a.status === 'pending' ? 'badge-pending' : 'badge-confirmed');
+  const statusLabel = past ? 'Yakunlangan' : (a.status === 'pending' ? 'Kutilmoqda' : 'Tasdiqlangan');
+
+  let actions = '';
+  if (!past) {
+    if (opts.showConfirm && a.status === 'pending') {
+      actions += `<button onclick="doConfirm(${a.id})" class="btn-primary text-xs px-3 py-1.5 rounded-lg font-semibold">✅ Tasdiqlash</button>`;
+    }
+    if (!cantCancel) {
+      actions += `<button onclick="openCancelModal(${a.id})" class="btn-danger text-xs px-3 py-1.5 rounded-lg font-semibold">❌ Bekor</button>`;
+    }
+  }
+
+  return `
+    <div class="card p-4 mb-3">
+      <div class="flex items-start justify-between gap-2">
+        <div>
+          <div class="font-semibold text-sm">🦷 ${a.service?.name || '—'}</div>
+          <div class="hint text-xs mt-0.5">📅 ${fmtDate(a.timeSlot.date)} · ⏰ ${fmtTime(a.timeSlot.time)}</div>
+          <div class="text-sm mt-1">👤 ${a.clientName || '—'}</div>
+          <div class="hint text-xs">📱 ${a.clientPhone || '—'}</div>
+        </div>
+        <span class="text-xs text-white px-2 py-0.5 rounded-full ${statusColor} shrink-0">${statusLabel}</span>
+      </div>
+      ${actions ? `<div class="flex gap-2 mt-3">${actions}</div>` : ''}
+    </div>`;
+}
+
+async function doConfirm(id) {
+  try {
+    await api(`/appointments/${id}/confirm`, { method: 'POST' });
+    toast('✅ Qabul tasdiqlandi');
+    loadCurrentTab();
+  } catch (e) {
+    toast('❌ ' + e.message);
+  }
+}
+
+// ── tabs ─────────────────────────────────────────────────────────────
+let currentTab = 'today';
+const loaded = {};
+
+function switchTab(tab) {
+  currentTab = tab;
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.getElementById('sec-' + tab).classList.add('active');
+  document.querySelectorAll('.tab').forEach(t => {
+    t.classList.remove('tab-active');
+    t.classList.add('hint');
+  });
+  const activeTab = document.getElementById('tab-' + tab);
+  activeTab.classList.add('tab-active');
+  activeTab.classList.remove('hint');
+  if (!loaded[tab]) loadTab(tab);
+}
+
+function loadCurrentTab() {
+  delete loaded[currentTab];
+  loadTab(currentTab);
+}
+
+function loadTab(tab) {
+  loaded[tab] = true;
+  if (tab === 'today') loadToday();
+  else if (tab === 'pending') loadPending();
+  else if (tab === 'week') loadWeek();
+  else if (tab === 'stats') loadStats();
+}
+
+// ── today ─────────────────────────────────────────────────────────────
+async function loadToday() {
+  const el = document.getElementById('today-content');
+  el.innerHTML = '<div class="spinner"></div>';
+  try {
+    const list = await api('/appointments/today');
+    if (!list.length) {
+      el.innerHTML = '<p class="hint text-center mt-8 text-sm">Bugun uchun qabul yo\'q</p>';
+      return;
+    }
+    el.innerHTML = list.map(a => aptCard(a, { showConfirm: false })).join('');
+  } catch (e) {
+    el.innerHTML = `<p class="text-center mt-8 text-sm" style="color:var(--tg-destructive)">Xato: ${e.message}</p>`;
+  }
+}
+
+// ── pending ───────────────────────────────────────────────────────────
+async function loadPending() {
+  const el = document.getElementById('pending-content');
+  el.innerHTML = '<div class="spinner"></div>';
+  try {
+    const list = await api('/appointments/pending');
+    const badge = document.getElementById('pending-badge');
+    if (list.length) {
+      badge.textContent = list.length;
+      badge.classList.remove('hidden');
+    } else {
+      badge.classList.add('hidden');
+    }
+    if (!list.length) {
+      el.innerHTML = '<p class="hint text-center mt-8 text-sm">Tasdiqlash kutayotgan qabul yo\'q</p>';
+      return;
+    }
+    el.innerHTML = list.map(a => aptCard(a, { showConfirm: true })).join('');
+  } catch (e) {
+    el.innerHTML = `<p class="text-center mt-8 text-sm" style="color:var(--tg-destructive)">Xato: ${e.message}</p>`;
+  }
+}
+
+// ── week ──────────────────────────────────────────────────────────────
+async function loadWeek() {
+  const el = document.getElementById('week-content');
+  el.innerHTML = '<div class="spinner"></div>';
+  try {
+    const list = await api('/appointments/week');
+    if (!list.length) {
+      el.innerHTML = '<p class="hint text-center mt-8 text-sm">Qabullar yo\'q</p>';
+      return;
+    }
+    let html = '';
+    let prevDate = '';
+    for (const a of list) {
+      if (a.timeSlot.date !== prevDate) {
+        prevDate = a.timeSlot.date;
+        const dateObj = new Date(a.timeSlot.date + 'T00:00:00+05:00');
+        const days = ['Yakshanba','Dushanba','Seshanba','Chorshanba','Payshanba','Juma','Shanba'];
+        const dayName = days[dateObj.getDay()];
+        html += `<div class="hint text-xs font-semibold uppercase tracking-wide mt-4 mb-2">${fmtDate(a.timeSlot.date)} · ${dayName}</div>`;
+      }
+      html += aptCard(a, { showConfirm: false });
+    }
+    el.innerHTML = html;
+  } catch (e) {
+    el.innerHTML = `<p class="text-center mt-8 text-sm" style="color:var(--tg-destructive)">Xato: ${e.message}</p>`;
+  }
+}
+
+// ── stats ─────────────────────────────────────────────────────────────
+async function loadStats() {
+  const el = document.getElementById('stats-content');
+  el.innerHTML = '<div class="spinner"></div>';
+  try {
+    const s = await api('/stats');
+    el.innerHTML = `
+      <div class="grid grid-cols-2 gap-3 mt-2">
+        <div class="card p-4 text-center">
+          <div class="text-3xl font-bold" style="color:var(--tg-button)">${s.users}</div>
+          <div class="hint text-xs mt-1">👥 Foydalanuvchilar</div>
+        </div>
+        <div class="card p-4 text-center">
+          <div class="text-3xl font-bold">${s.total}</div>
+          <div class="hint text-xs mt-1">📋 Jami qabullar</div>
+        </div>
+        <div class="card p-4 text-center">
+          <div class="text-3xl font-bold" style="color:#34c759">${s.confirmed}</div>
+          <div class="hint text-xs mt-1">✅ Tasdiqlangan</div>
+        </div>
+        <div class="card p-4 text-center">
+          <div class="text-3xl font-bold" style="color:#ff9500">${s.completed}</div>
+          <div class="hint text-xs mt-1">✔️ Yakunlangan</div>
+        </div>
+        <div class="card p-4 text-center col-span-2">
+          <div class="text-3xl font-bold" style="color:var(--tg-destructive)">${s.cancelled}</div>
+          <div class="hint text-xs mt-1">❌ Bekor qilingan</div>
+        </div>
+      </div>`;
+  } catch (e) {
+    el.innerHTML = `<p class="text-center mt-8 text-sm" style="color:var(--tg-destructive)">Xato: ${e.message}</p>`;
+  }
+}
+
+// ── init ──────────────────────────────────────────────────────────────
+loadToday();
+loadPending(); // badge uchun
+loaded['pending'] = false; // qayta load qilsin tab ochilganda
+</script>
+</body>
+</html>

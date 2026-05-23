@@ -84,10 +84,14 @@ export class AdminUpdate implements OnModuleInit {
       await ctx.reply('⛔ Sizda admin huquqi yo\'q.');
       return;
     }
-    await ctx.reply('👨‍⚕️ *Admin panel*', {
-      parse_mode: 'Markdown',
-      ...adminMainKb(),
-    });
+    const appUrl = this.configService.get<string>('app.url');
+    const kb = appUrl
+      ? Markup.inlineKeyboard([
+          [Markup.button.webApp('🌐 Mini App ochish', `${appUrl}/admin/`)],
+          ...adminMainKb().reply_markup.inline_keyboard,
+        ])
+      : adminMainKb();
+    await ctx.reply('👨‍⚕️ *Admin panel*', { parse_mode: 'Markdown', ...kb });
   }
 
   @Action('adm:back')
