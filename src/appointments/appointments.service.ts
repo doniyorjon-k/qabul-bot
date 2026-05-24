@@ -211,28 +211,24 @@ export class AppointmentsService {
   }
 
   async getMonthlyStats(): Promise<{ month: string; count: number }[]> {
-    const from = new Date(uzNow());
-    from.setMonth(from.getMonth() - 5);
-    const fromStr = uzDateStr(from).substring(0, 7) + '-01';
+    const fromDate = new Date(uzNow());
+    fromDate.setMonth(fromDate.getMonth() - 5);
+    const fromStr = uzDateStr(fromDate).substring(0, 7) + '-01';
 
     const rows = await this.appointmentsRepo
       .createQueryBuilder('apt')
-      .leftJoin('apt.timeSlot', 'slot')
-      .select('slot.date', 'date')
+      .innerJoin('apt.timeSlot', 'slot')
+      .select("TO_CHAR(slot.date::date, 'YYYY-MM')", 'month')
+      .addSelect('COUNT(apt.id)::int', 'cnt')
       .where('apt.status IN (:...statuses)', {
         statuses: [AppointmentStatus.CONFIRMED, AppointmentStatus.COMPLETED],
       })
-      .andWhere('slot.date >= :from', { from: fromStr })
+      .andWhere('slot.date >= :fromStr', { fromStr })
+      .groupBy("TO_CHAR(slot.date::date, 'YYYY-MM')")
+      .orderBy("TO_CHAR(slot.date::date, 'YYYY-MM')", 'ASC')
       .getRawMany();
 
-    const counts: Record<string, number> = {};
-    for (const r of rows) {
-      const month = r.date?.substring(0, 7);
-      if (month) counts[month] = (counts[month] || 0) + 1;
-    }
-    return Object.entries(counts)
-      .sort(([a], [b]) => a.localeCompare(b))
-      .map(([month, count]) => ({ month, count }));
+    return rows.map(r => ({ month: r.month, count: r.cnt }));
   }
 
   async getStats(): Promise<{ total: number; confirmed: number; cancelled: number; completed: number }> {
