@@ -14,6 +14,7 @@ export class SuperAdminBotService implements OnModuleInit {
   private readonly logger = new Logger(SuperAdminBotService.name);
   private bot: Telegraf | null = null;
   private superAdminIds: number[] = [];
+  private miniAppUrl = '';
   private rejectSessions = new Map<number, number>(); // userId -> paymentId
 
   constructor(
@@ -35,9 +36,13 @@ export class SuperAdminBotService implements OnModuleInit {
     }
 
     this.bot = new Telegraf(token);
-    this.setupHandlers();
 
     const appUrl = this.configService.get<string>('app.url');
+    this.miniAppUrl =
+      this.configService.get<string>('superAdmin.miniAppUrl') ||
+      (appUrl ? `${appUrl}/super-admin` : '');
+
+    this.setupHandlers();
     if (appUrl) {
       try {
         await this.bot.telegram.setWebhook(`${appUrl}/webhook/super-admin`);
@@ -65,10 +70,11 @@ export class SuperAdminBotService implements OnModuleInit {
 
     bot.start(async (ctx) => {
       if (!this.isSA(ctx.from.id)) return;
-      await ctx.reply('🔐 *Super Admin Panel*\n\nXush kelibsiz!', {
-        parse_mode: 'Markdown',
-        ...this.mainKb(),
-      });
+      const miniLine = this.miniAppUrl ? '\n🖥 *Boshqaruv Paneli* — klinikalar, rejalar, promokodlar, broadcast' : '';
+      await ctx.reply(
+        `🔐 *Super Admin Panel*\n\nXush kelibsiz!\n\nNimalar bor:${miniLine}\n📊 *Statistika* — umumiy ko'rsatkichlar\n🏥 *Klinikalar* — ro'yxat, to'xtatish, faollashtirish\n💳 *To'lovlar* — kutayotgan to'lovlarni tasdiqlash`,
+        { parse_mode: 'Markdown', ...this.mainKb() },
+      );
     });
 
     bot.hears('📊 Statistika', async (ctx) => {
@@ -197,17 +203,24 @@ export class SuperAdminBotService implements OnModuleInit {
   }
 
   private mainKb() {
-    return Markup.keyboard([
-      ['📊 Statistika', '🏥 Klinikalar'],
-      ["💳 To'lovlar"],
-    ]).resize();
+    const rows: any[] = [];
+    if (this.miniAppUrl) {
+      rows.push([Markup.button.webApp('🖥 Boshqaruv Paneli', this.miniAppUrl)]);
+    }
+    rows.push(['📊 Statistika', '🏥 Klinikalar']);
+    rows.push(["💳 To'lovlar"]);
+    return Markup.keyboard(rows).resize();
   }
 
   private mainKbInline() {
-    return Markup.inlineKeyboard([
+    const rows: any[] = [
       [Markup.button.callback('📊 Statistika', 'sa:stats'), Markup.button.callback('🏥 Klinikalar', 'sa:clinics')],
       [Markup.button.callback("💳 To'lovlar", 'sa:pending')],
-    ]);
+    ];
+    if (this.miniAppUrl) {
+      rows.unshift([Markup.button.webApp('🖥 Boshqaruv Paneli', this.miniAppUrl)]);
+    }
+    return Markup.inlineKeyboard(rows);
   }
 
   private async replyStats(ctx: any) {
