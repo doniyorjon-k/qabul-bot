@@ -21,6 +21,17 @@ export class AppController {
     return { status: 'ok', timestamp: new Date().toISOString() };
   }
 
+  @Get('debug-admin')
+  debugAdmin() {
+    const filePath = join(__dirname, '..', 'public', 'admin', 'index.html');
+    return {
+      dirname: __dirname,
+      filePath,
+      exists: existsSync(filePath),
+      htmlLength: this.adminHtml?.length ?? 0,
+    };
+  }
+
   @Get('admin')
   @Get('admin/')
   serveAdmin(@Res() res: Response) {
