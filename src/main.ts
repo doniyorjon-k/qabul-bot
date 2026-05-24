@@ -10,7 +10,7 @@ async function bootstrap() {
   const config = app.get(ConfigService);
   const port = config.get<number>('webhook.port') || 3000;
 
-  app.useStaticAssets(join(process.cwd(), 'public'));
+  app.useStaticAssets(join(__dirname, '..', 'public'));
   app.enableCors();
   const nodeEnv = config.get<string>('nodeEnv');
 
