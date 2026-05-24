@@ -70,7 +70,6 @@ export class SuperAdminBotService implements OnModuleInit {
 
     bot.start(async (ctx) => {
       if (!this.isSA(ctx.from.id)) return;
-      await ctx.reply('‌', Markup.removeKeyboard());
       await ctx.reply('🔐 *Super Admin Panel*', {
         parse_mode: 'Markdown',
         ...this.mainKbInline(),
