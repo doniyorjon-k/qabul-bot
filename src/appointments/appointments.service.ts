@@ -232,12 +232,24 @@ export class AppointmentsService {
   }
 
   async getStats(): Promise<{ total: number; confirmed: number; cancelled: number; completed: number }> {
-    const [total, confirmed, cancelled, completed] = await Promise.all([
+    const nowUzStr = uzDateStr(uzNow()) + ' ' + `${String(uzNow().getUTCHours()).padStart(2,'0')}:${String(uzNow().getUTCMinutes()).padStart(2,'0')}`;
+
+    const [total, cancelled, upcoming, done] = await Promise.all([
       this.appointmentsRepo.count(),
-      this.appointmentsRepo.count({ where: { status: AppointmentStatus.CONFIRMED } }),
       this.appointmentsRepo.count({ where: { status: AppointmentStatus.CANCELLED } }),
-      this.appointmentsRepo.count({ where: { status: AppointmentStatus.COMPLETED } }),
+      this.appointmentsRepo
+        .createQueryBuilder('apt')
+        .innerJoin('apt.timeSlot', 'slot')
+        .where('apt.status = :s', { s: AppointmentStatus.CONFIRMED })
+        .andWhere("slot.date || ' ' || slot.time > :now", { now: nowUzStr })
+        .getCount(),
+      this.appointmentsRepo
+        .createQueryBuilder('apt')
+        .innerJoin('apt.timeSlot', 'slot')
+        .where('apt.status = :s', { s: AppointmentStatus.CONFIRMED })
+        .andWhere("slot.date || ' ' || slot.time <= :now", { now: nowUzStr })
+        .getCount(),
     ]);
-    return { total, confirmed, cancelled, completed };
+    return { total, confirmed: upcoming, cancelled, completed: done };
   }
 }
