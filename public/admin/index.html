@@ -43,6 +43,14 @@
     .badge-cancelled{background:var(--red)}
     .badge-completed{background:#636366}
     .badge-pending{background:#ff9500}
+    .chip{display:inline-flex;align-items:center;justify-content:center;background:var(--bg2);color:var(--hint);border:1.5px solid transparent;border-radius:10px;padding:6px 12px;font-size:13px;font-weight:500;cursor:pointer;user-select:none;transition:all .15s}
+    .chip.on{background:rgba(0,122,255,.15);border-color:var(--btn);color:var(--btn)}
+    .chip-sm{padding:5px 8px;font-size:12px;border-radius:8px}
+    .form-input{background:var(--bg2);color:var(--txt);border:none;border-radius:12px;padding:11px 14px;width:100%;font-size:14px;outline:none;margin-bottom:8px}
+    .form-input::placeholder{color:var(--hint)}
+    .form-label{font-size:12px;color:var(--hint);margin-bottom:4px;display:block}
+    .section-title{font-size:13px;font-weight:700;color:var(--hint);text-transform:uppercase;letter-spacing:.5px;margin:16px 0 8px}
+    .btn-primary{background:var(--btn);color:var(--btn-txt);border:none;border-radius:10px;padding:10px 20px;font-size:14px;font-weight:600;cursor:pointer;width:100%}
   </style>
 </head>
 <body>
@@ -72,6 +80,11 @@
   <!-- FIKRLAR -->
   <div id="sec-reviews" class="section">
     <div id="reviews-content"><div class="spin"></div></div>
+  </div>
+
+  <!-- SOZLAMALAR -->
+  <div id="sec-settings" class="section">
+    <div id="settings-content"><div class="spin"></div></div>
   </div>
 
   <!-- QIDIRISH -->
@@ -118,6 +131,10 @@
   <button class="tab" id="tab-search" onclick="switchTab('search')">
     <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
     Qidirish
+  </button>
+  <button class="tab" id="tab-settings" onclick="switchTab('settings')">
+    <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+    Sozlamalar
   </button>
 </nav>
 
@@ -315,8 +332,114 @@ async function onSearch(val){
   },400);
 }
 
+// ── SETTINGS ──────────────────────────────────────────────────────
+const DAY_LABELS=['','Du','Se','Ch','Pa','Ju','Sh','Ya'];
+let scheduleData=null, clinicData=null;
+let pendingHours=null;
+
+function allTimeSlots(){
+  const s=[];
+  for(let h=8;h<=20;h++) for(let m=0;m<60;m+=30){
+    if(h===20&&m>0) break;
+    s.push(`${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`);
+  }
+  return s;
+}
+
+async function loadSettings(){
+  const el=document.getElementById('settings-content');
+  el.innerHTML='<div class="spin"></div>';
+  try{
+    [scheduleData, clinicData] = await Promise.all([api('/schedule'), api('/settings')]);
+    pendingHours=[...scheduleData.workHours];
+    renderSettings();
+  }catch(e){ el.innerHTML=`<p style="color:var(--red);text-align:center;margin-top:48px;font-size:13px">${e.message}</p>`; }
+}
+
+function renderSettings(){
+  const el=document.getElementById('settings-content');
+  const activeDays=scheduleData.workDays||[];
+  const allSlots=allTimeSlots();
+
+  const dayChips=([1,2,3,4,5,6,7]).map(d=>`
+    <span class="chip chip-sm ${activeDays.includes(d)?'on':''}" id="day-${d}" onclick="toggleDay(${d})">${DAY_LABELS[d]}</span>
+  `).join('');
+
+  const hourChips=allSlots.map(t=>`
+    <span class="chip chip-sm ${pendingHours.includes(t)?'on':''}" id="hour-${t.replace(':','-')}" onclick="toggleHour('${t}')">${t}</span>
+  `).join('');
+
+  el.innerHTML=`
+  <div class="section-title">📅 Ish kunlari</div>
+  <div class="card">
+    <div style="display:flex;flex-wrap:wrap;gap:8px">${dayChips}</div>
+  </div>
+
+  <div class="section-title">⏰ Ish soatlari</div>
+  <div class="card">
+    <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px" id="hours-grid">${hourChips}</div>
+    <button class="btn-primary" onclick="saveHours()">Saqlash</button>
+  </div>
+
+  <div class="section-title">🏥 Klinika ma'lumotlari</div>
+  <div class="card">
+    <label class="form-label">Klinika nomi</label>
+    <input class="form-input" id="cf-name" value="${clinicData.name||''}" placeholder="Nomi"/>
+    <label class="form-label">Telefon</label>
+    <input class="form-input" id="cf-phone" value="${clinicData.phone||''}" placeholder="+998 ..."/>
+    <label class="form-label">Manzil</label>
+    <input class="form-input" id="cf-address" value="${clinicData.address||''}" placeholder="Manzil"/>
+    <label class="form-label">Telegram (username)</label>
+    <input class="form-input" id="cf-tg" value="${clinicData.telegram||''}" placeholder="@username"/>
+    <label class="form-label">Xarita URL</label>
+    <input class="form-input" id="cf-maps" value="${clinicData.mapsUrl||''}" placeholder="https://maps.app.goo.gl/..."/>
+    <button class="btn-primary" onclick="saveClinicInfo()">Saqlash</button>
+  </div>`;
+}
+
+async function toggleDay(d){
+  const el=document.getElementById('day-'+d);
+  const days=scheduleData.workDays||[];
+  const newDays=days.includes(d)?days.filter(x=>x!==d):[...days,d].sort((a,b)=>a-b);
+  try{
+    await api('/schedule/days',{method:'PUT',body:JSON.stringify({days:newDays})});
+    scheduleData.workDays=newDays;
+    el.classList.toggle('on',newDays.includes(d));
+  }catch(e){ tg.showAlert('❌ '+e.message); }
+}
+
+function toggleHour(t){
+  const el=document.getElementById('hour-'+t.replace(':','-'));
+  if(pendingHours.includes(t)) pendingHours=pendingHours.filter(x=>x!==t);
+  else pendingHours=[...pendingHours,t].sort();
+  el.classList.toggle('on',pendingHours.includes(t));
+}
+
+async function saveHours(){
+  if(pendingHours.length===0){ tg.showAlert('Kamida 1 ta soat tanlang'); return; }
+  try{
+    await api('/schedule/hours',{method:'PUT',body:JSON.stringify({hours:pendingHours})});
+    scheduleData.workHours=pendingHours;
+    tg.showAlert('✅ Soatlar saqlandi');
+  }catch(e){ tg.showAlert('❌ '+e.message); }
+}
+
+async function saveClinicInfo(){
+  const body={
+    name: document.getElementById('cf-name').value.trim(),
+    phone: document.getElementById('cf-phone').value.trim(),
+    address: document.getElementById('cf-address').value.trim(),
+    telegram: document.getElementById('cf-tg').value.trim(),
+    mapsUrl: document.getElementById('cf-maps').value.trim(),
+  };
+  try{
+    await api('/settings',{method:'PUT',body:JSON.stringify(body)});
+    tg.showAlert('✅ Ma\'lumotlar saqlandi');
+  }catch(e){ tg.showAlert('❌ '+e.message); }
+}
+
 // ── Tabs ───────────────────────────────────────────────────────────
-const TABS=['today','week','stats','reviews','search'];
+const TABS=['today','week','stats','reviews','search','settings'];
 let curTab='today';
 const loaded={};
 
@@ -334,6 +457,7 @@ function loadTabFn(tab){
   else if(tab==='week')loadWeek();
   else if(tab==='stats')loadStats();
   else if(tab==='reviews')loadReviews();
+  else if(tab==='settings')loadSettings();
 }
 
 function refreshTab(){ delete loaded[curTab]; loadTabFn(curTab); }

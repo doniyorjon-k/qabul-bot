@@ -1,5 +1,5 @@
 import {
-  Controller, Get, Post, Param, Body, Query,
+  Controller, Get, Post, Put, Param, Body, Query,
   Headers, UnauthorizedException, BadRequestException, ParseIntPipe,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -10,6 +10,8 @@ import { AppointmentsService } from '../appointments/appointments.service';
 import { TimeSlotsService } from '../time-slots/time-slots.service';
 import { UsersService } from '../users/users.service';
 import { ReviewsService } from '../reviews/reviews.service';
+import { WorkScheduleService } from '../work-schedule/work-schedule.service';
+import { ClinicSettingsService } from '../clinic-settings/clinic-settings.service';
 
 @Controller('api/admin')
 export class AdminApiController {
@@ -21,6 +23,8 @@ export class AdminApiController {
     private readonly timeSlotsService: TimeSlotsService,
     private readonly usersService: UsersService,
     private readonly reviewsService: ReviewsService,
+    private readonly workScheduleService: WorkScheduleService,
+    private readonly clinicSettingsService: ClinicSettingsService,
     @InjectBot() private readonly bot: Telegraf,
   ) {
     this.adminIds = configService.get<number[]>('bot.adminIds') || [];
@@ -126,6 +130,51 @@ export class AdminApiController {
         { parse_mode: 'Markdown' },
       );
     } catch {}
+    return { ok: true };
+  }
+
+  @Get('schedule')
+  async getSchedule(@Headers('x-init-data') initData: string) {
+    this.validateAdmin(initData);
+    return this.workScheduleService.get();
+  }
+
+  @Put('schedule/days')
+  async saveWorkDays(
+    @Headers('x-init-data') initData: string,
+    @Body('days') days: number[],
+  ) {
+    this.validateAdmin(initData);
+    if (!Array.isArray(days)) throw new BadRequestException('days massiv bo\'lishi kerak');
+    await this.workScheduleService.saveWorkDays(days.map(Number));
+    return { ok: true };
+  }
+
+  @Put('schedule/hours')
+  async saveWorkHours(
+    @Headers('x-init-data') initData: string,
+    @Body('hours') hours: string[],
+  ) {
+    this.validateAdmin(initData);
+    if (!Array.isArray(hours)) throw new BadRequestException('hours massiv bo\'lishi kerak');
+    await this.workScheduleService.saveWorkHours(hours);
+    return { ok: true };
+  }
+
+  @Get('settings')
+  async getClinicSettings(@Headers('x-init-data') initData: string) {
+    this.validateAdmin(initData);
+    return this.clinicSettingsService.get();
+  }
+
+  @Put('settings')
+  async updateClinicSettings(
+    @Headers('x-init-data') initData: string,
+    @Body() body: { name?: string; address?: string; phone?: string; telegram?: string; mapsUrl?: string; tgUrl?: string; igUrl?: string },
+  ) {
+    this.validateAdmin(initData);
+    const { name, address, phone, telegram, mapsUrl, tgUrl, igUrl } = body;
+    await this.clinicSettingsService.update({ name, address, phone, telegram, mapsUrl, tgUrl, igUrl });
     return { ok: true };
   }
 }
