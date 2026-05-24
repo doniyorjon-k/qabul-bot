@@ -70,26 +70,11 @@ export class SuperAdminBotService implements OnModuleInit {
 
     bot.start(async (ctx) => {
       if (!this.isSA(ctx.from.id)) return;
-      const miniLine = this.miniAppUrl ? '\n🖥 *Boshqaruv Paneli* — klinikalar, rejalar, promokodlar, broadcast' : '';
-      await ctx.reply(
-        `🔐 *Super Admin Panel*\n\nXush kelibsiz!\n\nNimalar bor:${miniLine}\n📊 *Statistika* — umumiy ko'rsatkichlar\n🏥 *Klinikalar* — ro'yxat, to'xtatish, faollashtirish\n💳 *To'lovlar* — kutayotgan to'lovlarni tasdiqlash`,
-        { parse_mode: 'Markdown', ...this.mainKb() },
-      );
-    });
-
-    bot.hears('📊 Statistika', async (ctx) => {
-      if (!this.isSA(ctx.from.id)) return;
-      await this.replyStats(ctx);
-    });
-
-    bot.hears('🏥 Klinikalar', async (ctx) => {
-      if (!this.isSA(ctx.from.id)) return;
-      await this.replyClinicsList(ctx, false);
-    });
-
-    bot.hears(/To.lovlar/, async (ctx) => {
-      if (!this.isSA(ctx.from.id)) return;
-      await this.replyPending(ctx, false);
+      await ctx.reply('‌', Markup.removeKeyboard());
+      await ctx.reply('🔐 *Super Admin Panel*', {
+        parse_mode: 'Markdown',
+        ...this.mainKbInline(),
+      });
     });
 
     // ── Callbacks ─────────────────────────────────────────────────
@@ -200,16 +185,6 @@ export class SuperAdminBotService implements OnModuleInit {
       this.rejectSessions.delete(ctx.from.id);
       await this.rejectPayment(ctx, paymentId, (ctx.message as any).text);
     });
-  }
-
-  private mainKb() {
-    const rows: any[] = [];
-    if (this.miniAppUrl) {
-      rows.push([Markup.button.webApp('🖥 Boshqaruv Paneli', this.miniAppUrl)]);
-    }
-    rows.push(['📊 Statistika', '🏥 Klinikalar']);
-    rows.push(["💳 To'lovlar"]);
-    return Markup.keyboard(rows).resize();
   }
 
   private mainKbInline() {
