@@ -147,6 +147,7 @@ export class AdminApiController {
     this.validateAdmin(initData);
     if (!Array.isArray(days)) throw new BadRequestException('days massiv bo\'lishi kerak');
     await this.workScheduleService.saveWorkDays(days.map(Number));
+    await this.timeSlotsService.regenerateFutureSlots();
     return { ok: true };
   }
 
@@ -158,6 +159,7 @@ export class AdminApiController {
     this.validateAdmin(initData);
     if (!Array.isArray(hours)) throw new BadRequestException('hours massiv bo\'lishi kerak');
     await this.workScheduleService.saveWorkHours(hours);
+    await this.timeSlotsService.regenerateFutureSlots();
     return { ok: true };
   }
 
