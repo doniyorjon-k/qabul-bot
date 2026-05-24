@@ -163,6 +163,18 @@ export class AdminApiController {
     return { ok: true };
   }
 
+  @Post('schedule/toggle-date')
+  async toggleDate(
+    @Headers('x-init-data') initData: string,
+    @Body('date') date: string,
+  ) {
+    this.validateAdmin(initData);
+    if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) throw new BadRequestException('Noto\'g\'ri sana formati');
+    const isNowWorking = await this.workScheduleService.toggleDate(date);
+    await this.timeSlotsService.regenerateFutureSlots();
+    return { ok: true, isWorking: isNowWorking };
+  }
+
   @Get('settings')
   async getClinicSettings(@Headers('x-init-data') initData: string) {
     this.validateAdmin(initData);

@@ -346,6 +346,67 @@ function allTimeSlots(){
   return s;
 }
 
+function buildCalendar(sched){
+  const today = new Date();
+  // Find Monday of current week
+  const dow0 = today.getDay()===0?6:today.getDay()-1; // 0=Mon
+  const monday = new Date(today); monday.setDate(today.getDate()-dow0);
+  const cells=[];
+  // pad empty cells before Monday
+  for(let i=0;i<dow0;i++) cells.push('<div></div>');
+  for(let i=0;i<21;i++){
+    const d=new Date(monday); d.setDate(monday.getDate()+i);
+    const ds=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+    const isToday=ds===toDateStr(new Date());
+    const dow=d.getDay()===0?7:d.getDay();
+    const baseWork=(sched.workDays||[]).includes(dow);
+    const blocked=(sched.blockedDates||[]).includes(ds);
+    const extra=(sched.extraWorkDates||[]).includes(ds);
+    const isWork=extra||(baseWork&&!blocked);
+    const bg=isWork?'rgba(52,199,89,.18)':'rgba(255,59,48,.13)';
+    const border=isToday?'border:1.5px solid var(--btn)':'border:1.5px solid transparent';
+    cells.push(`<div id="cal-${ds}" onclick="toggleSpecialDate('${ds}')" style="border-radius:8px;padding:5px 0;cursor:pointer;background:${bg};${border};position:relative">
+      <div style="font-size:13px;font-weight:${isToday?700:400}">${d.getDate()}</div>
+    </div>`);
+  }
+  return cells.join('');
+}
+
+function toDateStr(d){
+  return`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+
+async function toggleSpecialDate(ds){
+  const el=document.getElementById('cal-'+ds);
+  if(!el)return;
+  el.style.opacity='0.4';
+  try{
+    const res=await api('/schedule/toggle-date',{method:'POST',body:JSON.stringify({date:ds})});
+    // update local state
+    if(res.isWorking){
+      scheduleData.blockedDates=(scheduleData.blockedDates||[]).filter(x=>x!==ds);
+      if(!(scheduleData.extraWorkDates||[]).includes(ds)){
+        const dow=new Date(ds).getDay()===0?7:new Date(ds).getDay();
+        if(!(scheduleData.workDays||[]).includes(dow))
+          scheduleData.extraWorkDates=[...(scheduleData.extraWorkDates||[]),ds];
+      }
+    } else {
+      scheduleData.extraWorkDates=(scheduleData.extraWorkDates||[]).filter(x=>x!==ds);
+      const dow=new Date(ds).getDay()===0?7:new Date(ds).getDay();
+      if((scheduleData.workDays||[]).includes(dow))
+        scheduleData.blockedDates=[...(scheduleData.blockedDates||[]),ds];
+    }
+    // re-render calendar cell
+    const dow=new Date(ds).getDay()===0?7:new Date(ds).getDay();
+    const baseWork=(scheduleData.workDays||[]).includes(dow);
+    const blocked=(scheduleData.blockedDates||[]).includes(ds);
+    const extra=(scheduleData.extraWorkDates||[]).includes(ds);
+    const isWork=extra||(baseWork&&!blocked);
+    el.style.background=isWork?'rgba(52,199,89,.18)':'rgba(255,59,48,.13)';
+    el.style.opacity='1';
+  }catch(e){ el.style.opacity='1'; tg.showAlert('❌ '+e.message); }
+}
+
 async function loadSettings(){
   const el=document.getElementById('settings-content');
   el.innerHTML='<div class="spin"></div>';
@@ -369,10 +430,22 @@ function renderSettings(){
     <span class="chip chip-sm ${pendingHours.includes(t)?'on':''}" id="hour-${t.replace(':','-')}" onclick="toggleHour('${t}')">${t}</span>
   `).join('');
 
+  // Build 21-day calendar
+  const calRows = buildCalendar(scheduleData);
+
   el.innerHTML=`
-  <div class="section-title">📅 Ish kunlari</div>
+  <div class="section-title">📅 Haftalik ish kunlari</div>
   <div class="card">
     <div style="display:flex;flex-wrap:wrap;gap:8px">${dayChips}</div>
+  </div>
+
+  <div class="section-title">🗓 Maxsus kunlar (keyingi 21 kun)</div>
+  <div class="card">
+    <p class="hint" style="font-size:11px;margin:0 0 10px">Ish kunini bosing — dam olish kunga, dam olish kunini bosing — ish kunga o'tadi</p>
+    <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;text-align:center">
+      ${['Du','Se','Ch','Pa','Ju','Sh','Ya'].map(d=>`<div style="font-size:10px;color:var(--hint);font-weight:600;padding-bottom:4px">${d}</div>`).join('')}
+      ${calRows}
+    </div>
   </div>
 
   <div class="section-title">⏰ Ish soatlari</div>
