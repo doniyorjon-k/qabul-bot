@@ -189,6 +189,52 @@ export class AppointmentsService {
     await this.appointmentsRepo.update(id, { reviewRequestSent: true });
   }
 
+  async findAllForAdmin(limit = 50): Promise<Appointment[]> {
+    return this.appointmentsRepo.find({
+      relations: ['service', 'timeSlot', 'user'],
+      order: { createdAt: 'DESC' },
+      take: limit,
+    });
+  }
+
+  async searchAppointments(query: string): Promise<Appointment[]> {
+    return this.appointmentsRepo
+      .createQueryBuilder('apt')
+      .leftJoinAndSelect('apt.service', 'service')
+      .leftJoinAndSelect('apt.timeSlot', 'slot')
+      .leftJoinAndSelect('apt.user', 'user')
+      .where('apt.clientName ILIKE :q OR apt.clientPhone ILIKE :q', { q: `%${query}%` })
+      .orderBy('slot.date', 'DESC')
+      .addOrderBy('slot.time', 'DESC')
+      .take(30)
+      .getMany();
+  }
+
+  async getMonthlyStats(): Promise<{ month: string; count: number }[]> {
+    const from = new Date(uzNow());
+    from.setMonth(from.getMonth() - 5);
+    const fromStr = uzDateStr(from).substring(0, 7) + '-01';
+
+    const rows = await this.appointmentsRepo
+      .createQueryBuilder('apt')
+      .leftJoin('apt.timeSlot', 'slot')
+      .select('slot.date', 'date')
+      .where('apt.status IN (:...statuses)', {
+        statuses: [AppointmentStatus.CONFIRMED, AppointmentStatus.COMPLETED],
+      })
+      .andWhere('slot.date >= :from', { from: fromStr })
+      .getRawMany();
+
+    const counts: Record<string, number> = {};
+    for (const r of rows) {
+      const month = r.date?.substring(0, 7);
+      if (month) counts[month] = (counts[month] || 0) + 1;
+    }
+    return Object.entries(counts)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([month, count]) => ({ month, count }));
+  }
+
   async getStats(): Promise<{ total: number; confirmed: number; cancelled: number; completed: number }> {
     const [total, confirmed, cancelled, completed] = await Promise.all([
       this.appointmentsRepo.count(),

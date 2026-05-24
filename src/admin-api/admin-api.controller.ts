@@ -1,5 +1,5 @@
 import {
-  Controller, Get, Post, Param, Body,
+  Controller, Get, Post, Param, Body, Query,
   Headers, UnauthorizedException, BadRequestException, ParseIntPipe,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -9,6 +9,7 @@ import { Telegraf } from 'telegraf';
 import { AppointmentsService } from '../appointments/appointments.service';
 import { TimeSlotsService } from '../time-slots/time-slots.service';
 import { UsersService } from '../users/users.service';
+import { ReviewsService } from '../reviews/reviews.service';
 
 @Controller('api/admin')
 export class AdminApiController {
@@ -19,6 +20,7 @@ export class AdminApiController {
     private readonly appointmentsService: AppointmentsService,
     private readonly timeSlotsService: TimeSlotsService,
     private readonly usersService: UsersService,
+    private readonly reviewsService: ReviewsService,
     @InjectBot() private readonly bot: Telegraf,
   ) {
     this.adminIds = configService.get<number[]>('bot.adminIds') || [];
@@ -55,11 +57,13 @@ export class AdminApiController {
   @Get('stats')
   async getStats(@Headers('x-init-data') initData: string) {
     this.validateAdmin(initData);
-    const [stats, users] = await Promise.all([
+    const [stats, users, reviewStats, monthly] = await Promise.all([
       this.appointmentsService.getStats(),
       this.usersService.count(),
+      this.reviewsService.getStats(),
+      this.appointmentsService.getMonthlyStats(),
     ]);
-    return { ...stats, users };
+    return { ...stats, users, reviewStats, monthly };
   }
 
   @Get('appointments/today')
@@ -68,37 +72,32 @@ export class AdminApiController {
     return this.appointmentsService.findTodayAppointments();
   }
 
-  @Get('appointments/pending')
-  async getPending(@Headers('x-init-data') initData: string) {
-    this.validateAdmin(initData);
-    return this.appointmentsService.findPendingByAdmin();
-  }
-
   @Get('appointments/week')
   async getWeek(@Headers('x-init-data') initData: string) {
     this.validateAdmin(initData);
     return this.appointmentsService.findWeekAppointments();
   }
 
-  @Post('appointments/:id/confirm')
-  async confirmApt(
+  @Get('appointments/all')
+  async getAll(@Headers('x-init-data') initData: string) {
+    this.validateAdmin(initData);
+    return this.appointmentsService.findAllForAdmin();
+  }
+
+  @Get('appointments/search')
+  async search(
     @Headers('x-init-data') initData: string,
-    @Param('id', ParseIntPipe) id: number,
+    @Query('q') q: string,
   ) {
     this.validateAdmin(initData);
-    const apt = await this.appointmentsService.findById(id);
-    if (!apt) throw new BadRequestException('Topilmadi');
+    if (!q || q.trim().length < 2) return [];
+    return this.appointmentsService.searchAppointments(q.trim());
+  }
 
-    await this.appointmentsService.confirm(id);
-    try {
-      const [y, m, d] = apt.timeSlot.date.split('-');
-      await this.bot.telegram.sendMessage(
-        apt.user.telegramId,
-        `✅ *Qabulingiz tasdiqlandi!*\n\n🦷 ${apt.service.name}\n📅 ${d}.${m}.${y} soat ${apt.timeSlot.time}`,
-        { parse_mode: 'Markdown' },
-      );
-    } catch {}
-    return { ok: true };
+  @Get('reviews')
+  async getReviews(@Headers('x-init-data') initData: string) {
+    this.validateAdmin(initData);
+    return this.reviewsService.findAll(50);
   }
 
   @Post('appointments/:id/cancel')
