@@ -10,6 +10,9 @@ import { FaqService } from '../faq/faq.service';
 import { ClinicSettingsService } from '../clinic-settings/clinic-settings.service';
 import { ReviewsService } from '../reviews/reviews.service';
 import { ClinicsService } from '../clinics/clinics.service';
+import { PaymentsService } from '../payments/payments.service';
+import { PlansService } from '../plans/plans.service';
+import { PromosService } from '../promos/promos.service';
 import {
   mainMenuKeyboard, cancelKeyboard, confirmKeyboard,
   nameStepKeyboard, phoneStepKeyboard,
@@ -29,6 +32,9 @@ export interface BotServices {
   clinicSettingsService: ClinicSettingsService;
   reviewsService: ReviewsService;
   clinicsService: ClinicsService;
+  paymentsService: PaymentsService;
+  plansService: PlansService;
+  promosService: PromosService;
 }
 
 interface UserSession {
@@ -53,6 +59,10 @@ interface AdminSession {
   editId?: number;
   tempText?: string;
   rejectAptId?: number;
+  payStep?: string;
+  payPlanId?: number;
+  payPlanName?: string;
+  payAmount?: number;
 }
 
 interface ReviewSession {
@@ -86,6 +96,7 @@ export function setupBotHandlers(
   clinic: Clinic,
   services: BotServices,
   appUrl: string,
+  superAdminIds: number[] = [],
 ) {
   const adminIds = new Set<number>(clinic.adminIds);
   const isAdmin = (userId: number) => adminIds.has(userId);
@@ -495,7 +506,7 @@ export function setupBotHandlers(
     if (!isAdmin(ctx.from.id)) { await ctx.reply('⛔ Sizda admin huquqi yo\'q.'); return; }
     const kb = appUrl
       ? Markup.inlineKeyboard([
-          [Markup.button.webApp('🌐 Mini App ochish', `${appUrl}/admin/`)],
+          [Markup.button.webApp('🌐 Mini App ochish', `${appUrl}/admin/?clinicId=${clinicId}`)],
           ...adminMainKb().reply_markup.inline_keyboard,
         ])
       : adminMainKb();
@@ -507,6 +518,90 @@ export function setupBotHandlers(
     if (!isAdmin(ctx.from.id)) return;
     delASess(ctx.from.id);
     await ctx.editMessageText('👨‍⚕️ *Admin panel*', { parse_mode: 'Markdown', ...adminMainKb() });
+  });
+
+  // ── /paid command ─────────────────────────────────────────────────
+  bot.command('paid', async (ctx) => {
+    if (!isAdmin(ctx.from.id)) return;
+    const currentClinic = await services.clinicsService.findById(clinicId);
+    if (!currentClinic) return;
+    if (currentClinic.status === 'suspended') {
+      await ctx.reply('⛔ Klinikangiz to\'xtatilgan. Murojaat qiling.');
+      return;
+    }
+    const hasPending = await services.paymentsService.hasPendingByClinic(clinicId);
+    if (hasPending) {
+      await ctx.reply('⏳ Sizning to\'lovingiz tasdiqlanishi kutilmoqda. Sabr qiling.');
+      return;
+    }
+    const plans = await services.plansService.findAll();
+    const cardNum = process.env.PAYMENT_CARD_NUMBER || '—';
+    const cardOwner = process.env.PAYMENT_CARD_OWNER || '—';
+    setASess(ctx.from.id, { payStep: 'choose_plan' });
+    const subInfo = buildSubscriptionInfo(currentClinic);
+    const planBtns = plans.map((p) => [
+      Markup.button.callback(`${p.name} — ${p.price.toLocaleString()} so'm (${p.durationDays} kun)`, `pay:plan:${p.id}`),
+    ]);
+    planBtns.push([Markup.button.callback('❌ Bekor qilish', 'pay:cancel')]);
+    await ctx.reply(
+      `💳 *Obuna to\'lovi*\n\n${subInfo}\n\n💳 Karta raqami: \`${cardNum}\`\n👤 Egasi: *${cardOwner}*\n\nQaysi rejani tanlaysiz?`,
+      { parse_mode: 'Markdown', ...Markup.inlineKeyboard(planBtns) },
+    );
+  });
+
+  bot.action(/^pay:plan:(\d+)$/, async (ctx) => {
+    await ctx.answerCbQuery();
+    if (!isAdmin(ctx.from.id)) return;
+    const planId = parseInt((ctx as any).match[1]);
+    const plan = await services.plansService.findById(planId);
+    if (!plan) return;
+    const promo = await services.promosService.findActive();
+    let amount = plan.price;
+    let promoLine = '';
+    if (promo) {
+      amount = services.promosService.applyDiscount(amount, promo);
+      promoLine = `\n🎁 Promo: *${promo.title}* — chegirma qo'llanildi!\n`;
+    }
+    const cardNum = process.env.PAYMENT_CARD_NUMBER || '—';
+    const cardOwner = process.env.PAYMENT_CARD_OWNER || '—';
+    const aSess = getASess(ctx.from.id);
+    aSess.payStep = 'send_screenshot';
+    aSess.payPlanId = planId;
+    aSess.payPlanName = plan.name;
+    aSess.payAmount = amount;
+    setASess(ctx.from.id, aSess);
+    await ctx.editMessageText(
+      `💳 *To\'lov ma\'lumotlari:*\n\n📋 Reja: *${plan.name}* (${plan.durationDays} kun)\n💰 Summa: *${amount.toLocaleString()} so\'m*${promoLine}\n\n💳 Karta: \`${cardNum}\`\n👤 Egasi: *${cardOwner}*\n\nPul o\'tkazganingizdan so\'ng *skrinshotni yuboring:*`,
+      {
+        parse_mode: 'Markdown',
+        ...Markup.inlineKeyboard([[Markup.button.callback('⬅️ Rejani o\'zgartirish', 'pay:back'), Markup.button.callback('❌ Bekor qilish', 'pay:cancel')]]),
+      },
+    );
+  });
+
+  bot.action('pay:back', async (ctx) => {
+    await ctx.answerCbQuery();
+    if (!isAdmin(ctx.from.id)) return;
+    const currentClinic = await services.clinicsService.findById(clinicId);
+    const plans = await services.plansService.findAll();
+    const cardNum = process.env.PAYMENT_CARD_NUMBER || '—';
+    const cardOwner = process.env.PAYMENT_CARD_OWNER || '—';
+    setASess(ctx.from.id, { payStep: 'choose_plan' });
+    const subInfo = buildSubscriptionInfo(currentClinic);
+    const planBtns = plans.map((p) => [
+      Markup.button.callback(`${p.name} — ${p.price.toLocaleString()} so'm (${p.durationDays} kun)`, `pay:plan:${p.id}`),
+    ]);
+    planBtns.push([Markup.button.callback('❌ Bekor qilish', 'pay:cancel')]);
+    await ctx.editMessageText(
+      `💳 *Obuna to\'lovi*\n\n${subInfo}\n\n💳 Karta raqami: \`${cardNum}\`\n👤 Egasi: *${cardOwner}*\n\nQaysi rejani tanlaysiz?`,
+      { parse_mode: 'Markdown', ...Markup.inlineKeyboard(planBtns) },
+    );
+  });
+
+  bot.action('pay:cancel', async (ctx) => {
+    await ctx.answerCbQuery();
+    delASess(ctx.from.id);
+    await ctx.editMessageText('❌ To\'lov bekor qilindi.');
   });
 
   // ── Broadcast ─────────────────────────────────────────────────────
@@ -1271,10 +1366,41 @@ export function setupBotHandlers(
     return next();
   });
 
-  // ── Photo handler (broadcast) ─────────────────────────────────────
+  // ── Photo handler (payment screenshot + broadcast) ───────────────
   bot.on('photo', async (ctx, next) => {
     if (!isAdmin(ctx.from.id)) return next();
     const aSess = adminSessionMap.get(uKey(ctx.from.id));
+
+    if (aSess?.payStep === 'send_screenshot' && aSess.payPlanId) {
+      const msg = ctx.message as any;
+      const photos: any[] = msg.photo;
+      const fileId = photos[photos.length - 1].file_id;
+      const currentClinic = await services.clinicsService.findById(clinicId);
+      const plan = await services.plansService.findById(aSess.payPlanId);
+      const payment = await services.paymentsService.create({
+        clinic: currentClinic,
+        plan,
+        amount: aSess.payAmount ?? plan.price,
+        adminTelegramId: ctx.from.id,
+        screenshotFileId: fileId,
+      });
+      delASess(ctx.from.id);
+      await ctx.reply(
+        `✅ *To\'lov ma\'lumotlari qabul qilindi!*\n\n📋 Reja: *${aSess.payPlanName}*\n💰 Summa: *${(aSess.payAmount ?? plan.price).toLocaleString()} so\'m*\n\n⏳ Super admin tasdiqlagandan so\'ng obunangiz faollashadi.\nOdatda 1-24 soat ichida tasdiqlanadi.`,
+        { parse_mode: 'Markdown' },
+      );
+      const capText =
+        `💳 *Yangi to\'lov #${payment.id}*\n\n` +
+        `🏥 Klinika: ${currentClinic?.name || ''} (#${clinicId})\n` +
+        `📋 Reja: ${plan?.name || ''} (${plan?.durationDays || ''} kun)\n` +
+        `💰 Summa: ${(aSess.payAmount ?? plan?.price ?? 0).toLocaleString()} so\'m\n` +
+        `👤 Admin: ${ctx.from.id}`;
+      for (const saId of superAdminIds) {
+        try { await bot.telegram.sendPhoto(saId, fileId, { caption: capText, parse_mode: 'Markdown' }); } catch {}
+      }
+      return;
+    }
+
     if (aSess?.broadcastStep !== 'enter_text') return next();
     const msg = ctx.message as any;
     const photos: any[] = msg.photo;
@@ -1492,4 +1618,20 @@ function fmtDate(dateStr: string): string {
   if (!dateStr) return '';
   const [y, m, d] = dateStr.split('-');
   return `${d}.${m}.${y}`;
+}
+
+function buildSubscriptionInfo(clinic: Clinic | null): string {
+  if (!clinic) return '';
+  const endsAt = clinic.subscriptionEndsAt ?? clinic.trialEndsAt;
+  const daysLeft = endsAt ? Math.ceil((endsAt.getTime() - Date.now()) / (1000 * 60 * 60 * 24)) : null;
+  const statusLabels: Record<string, string> = {
+    trial: '🆓 Sinov davri', active: '✅ Faol', grace: '⚠️ Grace davri', expired: '❌ Tugagan', suspended: '⛔ To\'xtatilgan',
+  };
+  let text = `📊 Holat: *${statusLabels[clinic.status] || clinic.status}*`;
+  if (daysLeft !== null) {
+    text += daysLeft > 0 ? `\n📅 Qoldi: *${daysLeft} kun*` : '\n📅 Muddati tugagan!';
+  } else {
+    text += '\n📅 Muddati: *Cheksiz*';
+  }
+  return text;
 }

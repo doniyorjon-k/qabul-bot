@@ -33,6 +33,8 @@ import { PromosModule } from './promos/promos.module';
 import { PaymentsModule } from './payments/payments.module';
 import { ClinicBotsModule } from './clinic-bots/clinic-bots.module';
 import { WebhookModule } from './webhook/webhook.module';
+import { SuperAdminBotModule } from './super-admin/super-admin-bot.module';
+import { SuperAdminApiModule } from './super-admin/super-admin-api.module';
 
 @Module({
   controllers: [AppController],
@@ -67,6 +69,8 @@ import { WebhookModule } from './webhook/webhook.module';
 
     ClinicBotsModule,
     WebhookModule,
+    SuperAdminBotModule,
+    SuperAdminApiModule,
     AdminApiModule,
     UsersModule,
     ServicesModule,

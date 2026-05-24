@@ -4,6 +4,7 @@ import { Markup } from 'telegraf';
 import { AppointmentsService } from '../appointments/appointments.service';
 import { ClinicsService } from '../clinics/clinics.service';
 import { ClinicBotsService } from '../clinic-bots/clinic-bots.service';
+import { ClinicStatus } from '../database/entities/clinic.entity';
 import { fmtTime } from '../bot/keyboards/calendar.keyboard';
 
 @Injectable()
@@ -82,6 +83,72 @@ export class NotificationsService {
           this.logger.error(`10 daqiqalik eslatmada xato: ${err.message}`);
         }
       }
+    }
+  }
+
+  // ── Subscription expiry (daily 08:00 Tashkent = 03:00 UTC) ──────
+  @Cron('0 3 * * *')
+  async processSubscriptionExpiry() {
+    const clinics = await this.clinicsService.findAll();
+    const now = new Date();
+
+    for (const clinic of clinics) {
+      if (clinic.status === ClinicStatus.SUSPENDED) continue;
+
+      const endsAt = clinic.subscriptionEndsAt ?? clinic.trialEndsAt;
+      if (!endsAt) continue; // unlimited — skip
+
+      const msLeft = endsAt.getTime() - now.getTime();
+      const daysLeft = Math.ceil(msLeft / 86400000);
+
+      if (clinic.status === ClinicStatus.TRIAL || clinic.status === ClinicStatus.ACTIVE) {
+        if (daysLeft <= 7 && daysLeft > 3 && !clinic.notified7Days) {
+          await this.notifyClinicAdmins(
+            clinic,
+            `⚠️ *Obuna eslatmasi*\n\nKlinikangiz obunasi *${daysLeft} kunda* tugaydi.\n\nUzaytirish uchun /paid buyrug'ini yuboring.`,
+          );
+          await this.clinicsService.update(clinic.id, { notified7Days: true });
+        }
+        if (daysLeft <= 3 && daysLeft > 1 && !clinic.notified3Days) {
+          await this.notifyClinicAdmins(
+            clinic,
+            `🔴 *Obuna tugayapti!*\n\nKlinikangiz obunasi *${daysLeft} kunda* tugaydi.\n\nHoziroq uzaytiring: /paid`,
+          );
+          await this.clinicsService.update(clinic.id, { notified3Days: true });
+        }
+        if (daysLeft <= 1 && daysLeft > 0 && !clinic.notified1Day) {
+          await this.notifyClinicAdmins(
+            clinic,
+            `🚨 *Ertaga obuna tugaydi!*\n\nKlinikangiz ertaga to'xtatiladi.\n\nZudlik bilan to'lang: /paid`,
+          );
+          await this.clinicsService.update(clinic.id, { notified1Day: true });
+        }
+        if (daysLeft <= 0) {
+          await this.clinicsService.update(clinic.id, { status: ClinicStatus.GRACE });
+          await this.notifyClinicAdmins(
+            clinic,
+            `❌ *Obuna muddati tugadi!*\n\nKlinikangiz grace davrida — 3 kun ichida to'lamasangiz bot to'xtatiladi.\n\nTo'lash: /paid`,
+          );
+          this.logger.log(`Clinic ${clinic.id} moved to GRACE`);
+        }
+      }
+
+      if (clinic.status === ClinicStatus.GRACE) {
+        const graceDays = Math.ceil((now.getTime() - endsAt.getTime()) / 86400000);
+        if (graceDays >= 3) {
+          await this.clinicsService.update(clinic.id, { status: ClinicStatus.EXPIRED });
+          await this.clinicBotsService.stopBot(clinic.id);
+          this.logger.log(`Clinic ${clinic.id} EXPIRED and bot stopped`);
+        }
+      }
+    }
+  }
+
+  private async notifyClinicAdmins(clinic: { id: number; adminIds: number[] }, text: string) {
+    for (const adminId of clinic.adminIds) {
+      try {
+        await this.clinicBotsService.sendMessage(clinic.id, adminId, text, { parse_mode: 'Markdown' });
+      } catch {}
     }
   }
 

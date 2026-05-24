@@ -9,6 +9,9 @@ import { WorkScheduleModule } from '../work-schedule/work-schedule.module';
 import { FaqModule } from '../faq/faq.module';
 import { ClinicSettingsModule } from '../clinic-settings/clinic-settings.module';
 import { ReviewsModule } from '../reviews/reviews.module';
+import { PaymentsModule } from '../payments/payments.module';
+import { PlansModule } from '../plans/plans.module';
+import { PromosModule } from '../promos/promos.module';
 
 @Module({
   imports: [
@@ -21,6 +24,9 @@ import { ReviewsModule } from '../reviews/reviews.module';
     FaqModule,
     ClinicSettingsModule,
     ReviewsModule,
+    PaymentsModule,
+    PlansModule,
+    PromosModule,
   ],
   providers: [ClinicBotsService],
   exports: [ClinicBotsService],

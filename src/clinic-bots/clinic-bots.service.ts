@@ -10,6 +10,9 @@ import { WorkScheduleService } from '../work-schedule/work-schedule.service';
 import { FaqService } from '../faq/faq.service';
 import { ClinicSettingsService } from '../clinic-settings/clinic-settings.service';
 import { ReviewsService } from '../reviews/reviews.service';
+import { PaymentsService } from '../payments/payments.service';
+import { PlansService } from '../plans/plans.service';
+import { PromosService } from '../promos/promos.service';
 import { setupBotHandlers, BotServices } from './bot-factory';
 import { Clinic } from '../database/entities/clinic.entity';
 import * as https from 'https';
@@ -31,6 +34,9 @@ export class ClinicBotsService implements OnModuleInit {
     private readonly faqService: FaqService,
     private readonly clinicSettingsService: ClinicSettingsService,
     private readonly reviewsService: ReviewsService,
+    private readonly paymentsService: PaymentsService,
+    private readonly plansService: PlansService,
+    private readonly promosService: PromosService,
   ) {}
 
   async onModuleInit() {
@@ -61,9 +67,13 @@ export class ClinicBotsService implements OnModuleInit {
       clinicSettingsService: this.clinicSettingsService,
       reviewsService: this.reviewsService,
       clinicsService: this.clinicsService,
+      paymentsService: this.paymentsService,
+      plansService: this.plansService,
+      promosService: this.promosService,
     };
 
-    setupBotHandlers(bot, clinic.id, clinic, services, webhookUrl || '');
+    const superAdminIds = this.configService.get<number[]>('superAdmin.ids') || [];
+    setupBotHandlers(bot, clinic.id, clinic, services, webhookUrl || '', superAdminIds);
 
     if (webhookUrl) {
       const webhookPath = `/webhook/${clinic.id}`;

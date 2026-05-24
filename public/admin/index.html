@@ -142,12 +142,13 @@
 const tg = window.Telegram.WebApp;
 tg.ready(); tg.expand();
 const initData = tg.initData;
+const clinicId = new URLSearchParams(window.location.search).get('clinicId') || '';
 
 // ── API ────────────────────────────────────────────────────────────
 function api(path, opts={}) {
   return fetch('/api/admin'+path, {
     ...opts,
-    headers:{'x-init-data':initData,'Content-Type':'application/json',...(opts.headers||{})},
+    headers:{'x-init-data':initData,'x-clinic-id':clinicId,'Content-Type':'application/json',...(opts.headers||{})},
   }).then(async r => {
     if (!r.ok) { const e=await r.json().catch(()=>({})); throw new Error(e.message||r.statusText); }
     return r.json();

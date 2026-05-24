@@ -12,9 +12,13 @@ export default () => ({
   superAdmin: {
     botToken: process.env.SUPER_ADMIN_BOT_TOKEN || '',
     ids: (process.env.SUPER_ADMIN_IDS || '').split(',').map(Number).filter(Boolean),
+    miniAppUrl: process.env.SUPER_ADMIN_MINI_APP_URL || '',
+  },
+  payment: {
+    cardNumber: process.env.PAYMENT_CARD_NUMBER || '',
+    cardOwner: process.env.PAYMENT_CARD_OWNER || '',
   },
   nodeEnv: process.env.NODE_ENV || 'development',
-  // Legacy single-clinic env vars used only for initial seed in ClinicsService.onModuleInit
   bot: {
     token: process.env.BOT_TOKEN || '',
     adminIds: (process.env.ADMIN_IDS || '').split(',').map(Number).filter(Boolean),

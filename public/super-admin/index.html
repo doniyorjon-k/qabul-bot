@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1"/>
+  <title>Super Admin</title>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    :root{--bg:var(--tg-theme-bg-color,#1c1c1e);--bg2:var(--tg-theme-secondary-bg-color,#2c2c2e);--txt:var(--tg-theme-text-color,#fff);--hint:var(--tg-theme-hint-color,#8e8e93);--btn:var(--tg-theme-button-color,#007aff);--btn-txt:var(--tg-theme-button-text-color,#fff);--red:var(--tg-theme-destructive-text-color,#ff3b30)}
+    *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+    body{background:var(--bg);color:var(--txt);font-family:-apple-system,sans-serif;margin:0;padding-bottom:72px}
+    .card{background:var(--bg2);border-radius:14px;padding:14px;margin-bottom:10px}
+    .hint{color:var(--hint)}
+    .section{display:none}.section.active{display:block}
+    .spin{border:2px solid var(--bg2);border-top-color:var(--btn);border-radius:50%;width:28px;height:28px;animation:sp .7s linear infinite;margin:48px auto}
+    @keyframes sp{to{transform:rotate(360deg)}}
+    .tab-bar{position:fixed;bottom:0;left:0;right:0;display:flex;background:var(--bg2);border-top:1px solid rgba(142,142,147,.25);z-index:20}
+    .tab{flex:1;display:flex;flex-direction:column;align-items:center;padding:8px 0 6px;gap:2px;border:none;background:none;color:var(--hint);font-size:9px;cursor:pointer}
+    .tab.on{color:var(--btn)}
+    .tab svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.7}
+    .btn-primary{background:var(--btn);color:var(--btn-txt);border:none;border-radius:10px;padding:10px 16px;font-size:14px;font-weight:600;cursor:pointer;width:100%}
+    .btn-red{background:var(--red);color:#fff;border:none;border-radius:10px;padding:8px 14px;font-size:13px;font-weight:600;cursor:pointer}
+    .btn-gray{background:var(--bg);color:var(--hint);border:none;border-radius:10px;padding:8px 14px;font-size:13px;cursor:pointer}
+    .btn-sm{padding:6px 12px;font-size:12px;border-radius:8px}
+    .modal{position:fixed;inset:0;background:rgba(0,0,0,.55);display:flex;align-items:flex-end;z-index:50}
+    .modal.hidden{display:none}
+    .modal-box{background:var(--bg2);border-radius:18px 18px 0 0;width:100%;padding:20px;max-height:80vh;overflow-y:auto}
+    .form-input{background:var(--bg);color:var(--txt);border:1px solid rgba(142,142,147,.3);border-radius:10px;padding:10px 12px;width:100%;font-size:14px;outline:none;margin-bottom:8px}
+    .form-input::placeholder{color:var(--hint)}
+    .form-label{font-size:12px;color:var(--hint);margin-bottom:4px;display:block}
+    .badge{font-size:10px;font-weight:700;color:#fff;padding:2px 8px;border-radius:99px;display:inline-block}
+    .badge-trial{background:#af52de}
+    .badge-active{background:#34c759}
+    .badge-grace{background:#ff9500}
+    .badge-expired{background:var(--red)}
+    .badge-suspended{background:#636366}
+    .section-title{font-size:12px;font-weight:700;color:var(--hint);text-transform:uppercase;letter-spacing:.5px;margin:16px 0 8px}
+    select.form-input{appearance:none}
+  </style>
+</head>
+<body>
+
+<div style="position:sticky;top:0;z-index:10;background:var(--bg);padding:12px 16px 8px;display:flex;align-items:center;justify-content:space-between">
+  <span style="font-size:16px;font-weight:700">🔐 Super Admin</span>
+  <button onclick="refreshTab()" style="background:none;border:none;color:var(--btn);font-size:13px;cursor:pointer">↻</button>
+</div>
+
+<div style="padding:0 14px">
+  <div id="sec-stats" class="section active"><div id="stats-content"><div class="spin"></div></div></div>
+  <div id="sec-clinics" class="section"><div id="clinics-content"><div class="spin"></div></div></div>
+  <div id="sec-payments" class="section"><div id="payments-content"><div class="spin"></div></div></div>
+  <div id="sec-plans" class="section"><div id="plans-content"><div class="spin"></div></div></div>
+  <div id="sec-promos" class="section"><div id="promos-content"><div class="spin"></div></div></div>
+</div>
+
+<!-- Modal -->
+<div id="modal" class="modal hidden">
+  <div class="modal-box" id="modal-body"></div>
+</div>
+
+<!-- Tab Bar -->
+<nav class="tab-bar">
+  <button class="tab on" id="tab-stats" onclick="switchTab('stats')">
+    <svg viewBox="0 0 24 24"><path d="M18 20V10M12 20V4M6 20v-6"/></svg>Stats
+  </button>
+  <button class="tab" id="tab-clinics" onclick="switchTab('clinics')">
+    <svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>Klinikalar
+  </button>
+  <button class="tab" id="tab-payments" onclick="switchTab('payments')">
+    <svg viewBox="0 0 24 24"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>To'lovlar
+  </button>
+  <button class="tab" id="tab-plans" onclick="switchTab('plans')">
+    <svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>Rejalar
+  </button>
+  <button class="tab" id="tab-promos" onclick="switchTab('promos')">
+    <svg viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>Promos
+  </button>
+</nav>
+
+<script>
+const tg = window.Telegram.WebApp;
+tg.ready(); tg.expand();
+const initData = tg.initData;
+
+function api(path, opts={}) {
+  return fetch('/api/super-admin'+path, {
+    ...opts,
+    headers:{'x-init-data':initData,'Content-Type':'application/json',...(opts.headers||{})},
+  }).then(async r => {
+    if (!r.ok) { const e=await r.json().catch(()=>({})); throw new Error(e.message||r.statusText); }
+    return r.json();
+  });
+}
+
+const STATUS_BADGE = {
+  trial:'<span class="badge badge-trial">Sinov</span>',
+  active:'<span class="badge badge-active">Faol</span>',
+  grace:'<span class="badge badge-grace">Grace</span>',
+  expired:'<span class="badge badge-expired">Tugagan</span>',
+  suspended:'<span class="badge badge-suspended">To\'xtatilgan</span>',
+};
+
+function openModal(html) {
+  document.getElementById('modal-body').innerHTML = html;
+  document.getElementById('modal').classList.remove('hidden');
+}
+function closeModal() { document.getElementById('modal').classList.add('hidden'); }
+
+// ── STATS ──────────────────────────────────────────────────────────
+async function loadStats() {
+  const el = document.getElementById('stats-content');
+  el.innerHTML = '<div class="spin"></div>';
+  try {
+    const s = await api('/stats');
+    el.innerHTML = `
+    <div class="section-title">🏥 Klinikalar</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px">
+      <div class="card" style="text-align:center"><div style="font-size:26px;font-weight:700;color:var(--btn)">${s.total}</div><div class="hint" style="font-size:11px">Jami</div></div>
+      <div class="card" style="text-align:center"><div style="font-size:26px;font-weight:700;color:#34c759">${s.active||0}</div><div class="hint" style="font-size:11px">Faol</div></div>
+      <div class="card" style="text-align:center"><div style="font-size:26px;font-weight:700;color:#af52de">${s.trial||0}</div><div class="hint" style="font-size:11px">Sinov</div></div>
+      <div class="card" style="text-align:center"><div style="font-size:26px;font-weight:700;color:#ff9500">${s.grace||0}</div><div class="hint" style="font-size:11px">Grace</div></div>
+      <div class="card" style="text-align:center"><div style="font-size:26px;font-weight:700;color:var(--red)">${s.expired||0}</div><div class="hint" style="font-size:11px">Tugagan</div></div>
+      <div class="card" style="text-align:center"><div style="font-size:26px;font-weight:700;color:#636366">${s.suspended||0}</div><div class="hint" style="font-size:11px">To'xtatilgan</div></div>
+    </div>
+    <div class="card" style="text-align:center">
+      <div style="font-size:26px;font-weight:700;color:#ff9500">${s.pendingPayments}</div>
+      <div class="hint" style="font-size:11px">💳 Kutayotgan to'lovlar</div>
+      ${s.pendingPayments>0?`<button class="btn-primary btn-sm" style="margin-top:8px" onclick="switchTab('payments')">Ko'rish</button>`:''}
+    </div>`;
+  } catch(e) { el.innerHTML = `<p style="color:var(--red);text-align:center;margin-top:48px">${e.message}</p>`; }
+}
+
+// ── CLINICS ────────────────────────────────────────────────────────
+let allClinics = [];
+let clinicFilter = 'all';
+
+async function loadClinics() {
+  const el = document.getElementById('clinics-content');
+  el.innerHTML = '<div class="spin"></div>';
+  try {
+    allClinics = await api('/clinics');
+    renderClinics();
+  } catch(e) { el.innerHTML = `<p style="color:var(--red);text-align:center;margin-top:48px">${e.message}</p>`; }
+}
+
+function renderClinics() {
+  const el = document.getElementById('clinics-content');
+  const filters = ['all','trial','active','grace','expired','suspended'];
+  const labels = {all:'Barchasi',trial:'Sinov',active:'Faol',grace:'Grace',expired:'Tugagan',suspended:"To'xtatilgan"};
+  const filtered = clinicFilter === 'all' ? allClinics : allClinics.filter(c => c.status === clinicFilter);
+  const chips = filters.map(f =>
+    `<span onclick="setFilter('${f}')" style="display:inline-block;padding:5px 10px;border-radius:20px;font-size:12px;cursor:pointer;margin:0 4px 6px 0;background:${f===clinicFilter?'var(--btn)':'var(--bg2)'};color:${f===clinicFilter?'var(--btn-txt)':'var(--hint)'}">${labels[f]}</span>`
+  ).join('');
+  const cards = filtered.map(c => {
+    const endsAt = c.subscriptionEndsAt || c.trialEndsAt;
+    const daysLeft = endsAt ? Math.ceil((new Date(endsAt) - new Date()) / 86400000) : null;
+    const endsStr = endsAt ? new Date(endsAt).toLocaleDateString('ru-RU') : 'Cheksiz';
+    return `<div class="card" onclick="openClinicDetail(${c.id})" style="cursor:pointer">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start">
+        <div>
+          <div style="font-weight:600;font-size:14px">${c.name}</div>
+          <div class="hint" style="font-size:12px;margin-top:2px">ID: ${c.id} · ${endsStr}${daysLeft!==null?` (${daysLeft} kun)`:''}</div>
+        </div>
+        ${STATUS_BADGE[c.status]||''}
+      </div>
+    </div>`;
+  }).join('');
+  el.innerHTML = `
+    <div style="margin-bottom:10px;overflow-x:auto;white-space:nowrap">${chips}</div>
+    <button class="btn-primary" style="margin-bottom:12px" onclick="openNewClinicModal()">➕ Yangi klinika</button>
+    ${cards || '<p class="hint" style="text-align:center;margin-top:32px">Hech narsa topilmadi</p>'}`;
+}
+
+function setFilter(f) { clinicFilter = f; renderClinics(); }
+
+function openClinicDetail(id) {
+  const c = allClinics.find(x => x.id === id);
+  if (!c) return;
+  const endsAt = c.subscriptionEndsAt || c.trialEndsAt;
+  const endsStr = endsAt ? new Date(endsAt).toLocaleDateString('ru-RU') : 'Cheksiz';
+  const isSuspended = c.status === 'suspended';
+  openModal(`
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+      <b style="font-size:16px">🏥 ${c.name}</b>${STATUS_BADGE[c.status]||''}
+    </div>
+    <p class="hint" style="font-size:12px;margin:0 0 4px">ID: ${c.id}</p>
+    <p class="hint" style="font-size:12px;margin:0 0 12px">Muddat: ${endsStr}</p>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      ${isSuspended
+        ? `<button class="btn-primary" style="grid-column:span 2" onclick="clinicAction(${id},'activate')">✅ Faollashtirish</button>`
+        : `<button class="btn-primary btn-sm" onclick="clinicAction(${id},'unlimited')">♾️ Cheksiz</button>
+           <button class="btn-gray btn-sm" onclick="clinicAction(${id},'extend-trial')">➕7 kun</button>
+           <button class="btn-red btn-sm" style="grid-column:span 2" onclick="clinicAction(${id},'suspend')">⛔ To'xtatish</button>`
+      }
+    </div>
+    <button class="btn-gray" style="width:100%;margin-top:10px" onclick="closeModal()">Yopish</button>
+  `);
+}
+
+async function clinicAction(id, action) {
+  try {
+    await api(`/clinics/${id}/${action}`, { method: 'POST' });
+    closeModal();
+    tg.showAlert('✅ Amalga oshirildi');
+    allClinics = await api('/clinics');
+    renderClinics();
+  } catch(e) { tg.showAlert('❌ ' + e.message); }
+}
+
+function openNewClinicModal() {
+  openModal(`
+    <b style="font-size:15px">➕ Yangi klinika</b>
+    <div style="margin-top:12px">
+      <label class="form-label">Nomi</label>
+      <input class="form-input" id="nc-name" placeholder="Smile Dental"/>
+      <label class="form-label">Bot Token</label>
+      <input class="form-input" id="nc-token" placeholder="123456:ABC..."/>
+      <label class="form-label">Admin ID (vergul bilan)</label>
+      <input class="form-input" id="nc-admins" placeholder="123456789"/>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:8px">
+      <button class="btn-gray" style="flex:1" onclick="closeModal()">Bekor</button>
+      <button class="btn-primary" style="flex:1" onclick="createClinic()">Yaratish</button>
+    </div>
+  `);
+}
+
+async function createClinic() {
+  const name = document.getElementById('nc-name').value.trim();
+  const token = document.getElementById('nc-token').value.trim();
+  const adminsRaw = document.getElementById('nc-admins').value.trim();
+  if (!name || !token) { tg.showAlert('Nom va token kiritilishi shart'); return; }
+  const adminIds = adminsRaw ? adminsRaw.split(',').map(Number).filter(Boolean) : [];
+  try {
+    await api('/clinics', { method: 'POST', body: JSON.stringify({ name, botToken: token, adminIds }) });
+    closeModal();
+    tg.showAlert('✅ Klinika yaratildi');
+    allClinics = await api('/clinics');
+    renderClinics();
+  } catch(e) { tg.showAlert('❌ ' + e.message); }
+}
+
+// ── PAYMENTS ───────────────────────────────────────────────────────
+let rejectPaymentId = null;
+async function loadPayments() {
+  const el = document.getElementById('payments-content');
+  el.innerHTML = '<div class="spin"></div>';
+  try {
+    const payments = await api('/payments/pending');
+    if (!payments.length) {
+      el.innerHTML = '<p class="hint" style="text-align:center;margin-top:48px">Kutayotgan to\'lovlar yo\'q</p>';
+      return;
+    }
+    el.innerHTML = payments.map(p => `
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start">
+        <div>
+          <div style="font-weight:600;font-size:14px">💳 To'lov #${p.id}</div>
+          <div class="hint" style="font-size:12px;margin-top:2px">🏥 ${p.clinic?.name || '—'}</div>
+          <div class="hint" style="font-size:12px">📋 ${p.plan?.name || '—'} · ${(p.amount||0).toLocaleString()} so'm</div>
+          <div class="hint" style="font-size:11px">${new Date(p.createdAt).toLocaleString('ru-RU')}</div>
+        </div>
+      </div>
+      ${p.screenshotFileId ? `<div style="font-size:11px;color:var(--hint);margin-top:6px">📷 Screenshot mavjud</div>` : ''}
+      <div style="display:flex;gap:8px;margin-top:10px">
+        <button class="btn-primary btn-sm" style="flex:1" onclick="confirmPayment(${p.id})">✅ Tasdiqlash</button>
+        <button class="btn-red btn-sm" style="flex:1" onclick="openRejectModal(${p.id})">❌ Rad etish</button>
+      </div>
+    </div>`).join('');
+  } catch(e) { el.innerHTML = `<p style="color:var(--red);text-align:center;margin-top:48px">${e.message}</p>`; }
+}
+
+async function confirmPayment(id) {
+  try {
+    await api(`/payments/${id}/confirm`, { method: 'POST' });
+    tg.showAlert('✅ To\'lov tasdiqlandi!');
+    loadPayments();
+  } catch(e) { tg.showAlert('❌ ' + e.message); }
+}
+
+function openRejectModal(id) {
+  rejectPaymentId = id;
+  openModal(`
+    <b>❌ To'lov #${id} rad etish</b>
+    <div style="margin-top:12px">
+      <label class="form-label">Sabab</label>
+      <textarea class="form-input" id="reject-reason" rows="3" placeholder="Rad etish sababi..."></textarea>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:8px">
+      <button class="btn-gray" style="flex:1" onclick="closeModal()">Bekor</button>
+      <button class="btn-red" style="flex:1" onclick="doReject()">Rad etish</button>
+    </div>
+  `);
+}
+
+async function doReject() {
+  const reason = document.getElementById('reject-reason').value.trim();
+  try {
+    await api(`/payments/${rejectPaymentId}/reject`, { method: 'POST', body: JSON.stringify({ reason }) });
+    closeModal();
+    tg.showAlert('✅ Rad etildi');
+    loadPayments();
+  } catch(e) { tg.showAlert('❌ ' + e.message); }
+}
+
+// ── PLANS ──────────────────────────────────────────────────────────
+async function loadPlans() {
+  const el = document.getElementById('plans-content');
+  el.innerHTML = '<div class="spin"></div>';
+  try {
+    const plans = await api('/plans');
+    el.innerHTML = plans.map(p => `
+    <div class="card">
+      <div style="font-weight:600;font-size:15px;margin-bottom:10px">📋 ${p.name}</div>
+      <label class="form-label">Narxi (so'm)</label>
+      <input class="form-input" id="plan-price-${p.id}" value="${p.price}" type="number"/>
+      <label class="form-label">Davomiyligi (kun)</label>
+      <input class="form-input" id="plan-days-${p.id}" value="${p.durationDays}" type="number"/>
+      <button class="btn-primary btn-sm" onclick="savePlan(${p.id})">💾 Saqlash</button>
+    </div>`).join('');
+  } catch(e) { el.innerHTML = `<p style="color:var(--red);text-align:center;margin-top:48px">${e.message}</p>`; }
+}
+
+async function savePlan(id) {
+  const price = parseInt(document.getElementById(`plan-price-${id}`).value);
+  const durationDays = parseInt(document.getElementById(`plan-days-${id}`).value);
+  try {
+    await api(`/plans/${id}`, { method: 'PUT', body: JSON.stringify({ price, durationDays }) });
+    tg.showAlert('✅ Saqlandi');
+  } catch(e) { tg.showAlert('❌ ' + e.message); }
+}
+
+// ── PROMOS ─────────────────────────────────────────────────────────
+async function loadPromos() {
+  const el = document.getElementById('promos-content');
+  el.innerHTML = '<div class="spin"></div>';
+  try {
+    const promos = await api('/promos');
+    el.innerHTML = `
+    <button class="btn-primary" style="margin-bottom:12px" onclick="openNewPromoModal()">➕ Yangi promo</button>
+    ${promos.map(p => `
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+        <b>${p.title}</b>
+        <span class="badge" style="background:${p.isActive?'#34c759':'#636366'}">${p.isActive?'Faol':"Nofaol"}</span>
+      </div>
+      <div class="hint" style="font-size:12px">
+        ${p.discountPercent ? `${p.discountPercent}% chegirma` : ''}
+        ${p.discountAmount ? `${p.discountAmount.toLocaleString()} so'm chegirma` : ''}
+      </div>
+      <div class="hint" style="font-size:11px">${p.validFrom} — ${p.validTo}</div>
+      <div style="display:flex;gap:8px;margin-top:10px">
+        <button class="btn-gray btn-sm" style="flex:1" onclick="openEditPromoModal(${JSON.stringify(p).replace(/'/g,'&#39;')})">✏️ Tahrirlash</button>
+        <button class="btn-red btn-sm" style="flex:1" onclick="deletePromo(${p.id})">🗑 O'chirish</button>
+      </div>
+    </div>`).join('') || '<p class="hint" style="text-align:center;margin-top:32px">Promo yo\'q</p>'}`;
+  } catch(e) { el.innerHTML = `<p style="color:var(--red);text-align:center;margin-top:48px">${e.message}</p>`; }
+}
+
+function promoFormHtml(p={}) {
+  return `
+    <label class="form-label">Nomi</label>
+    <input class="form-input" id="promo-title" value="${p.title||''}" placeholder="Yozgi chegirma"/>
+    <label class="form-label">Chegirma foiz (%)</label>
+    <input class="form-input" id="promo-pct" value="${p.discountPercent||''}" type="number" placeholder="20"/>
+    <label class="form-label">Chegirma miqdor (so'm, agar foiz bo'lmasa)</label>
+    <input class="form-input" id="promo-amt" value="${p.discountAmount||''}" type="number" placeholder="50000"/>
+    <label class="form-label">Boshlanish sanasi</label>
+    <input class="form-input" id="promo-from" value="${p.validFrom||''}" type="date"/>
+    <label class="form-label">Tugash sanasi</label>
+    <input class="form-input" id="promo-to" value="${p.validTo||''}" type="date"/>
+    <label style="display:flex;align-items:center;gap:8px;margin-bottom:8px;cursor:pointer">
+      <input type="checkbox" id="promo-active" ${p.isActive!==false?'checked':''}/> Faol
+    </label>`;
+}
+
+function promoFormData() {
+  return {
+    title: document.getElementById('promo-title').value.trim(),
+    discountPercent: parseInt(document.getElementById('promo-pct').value)||null,
+    discountAmount: parseInt(document.getElementById('promo-amt').value)||null,
+    validFrom: document.getElementById('promo-from').value,
+    validTo: document.getElementById('promo-to').value,
+    isActive: document.getElementById('promo-active').checked,
+  };
+}
+
+function openNewPromoModal() {
+  openModal(`<b>➕ Yangi promo</b><div style="margin-top:12px">${promoFormHtml()}</div>
+    <div style="display:flex;gap:8px;margin-top:8px">
+      <button class="btn-gray" style="flex:1" onclick="closeModal()">Bekor</button>
+      <button class="btn-primary" style="flex:1" onclick="createPromo()">Yaratish</button>
+    </div>`);
+}
+
+function openEditPromoModal(p) {
+  const data = typeof p === 'string' ? JSON.parse(p) : p;
+  openModal(`<b>✏️ Promoни tahrirlash</b><div style="margin-top:12px">${promoFormHtml(data)}</div>
+    <div style="display:flex;gap:8px;margin-top:8px">
+      <button class="btn-gray" style="flex:1" onclick="closeModal()">Bekor</button>
+      <button class="btn-primary" style="flex:1" onclick="updatePromo(${data.id})">Saqlash</button>
+    </div>`);
+}
+
+async function createPromo() {
+  const data = promoFormData();
+  if (!data.title || !data.validFrom || !data.validTo) { tg.showAlert('Nomi va sanalar kiritilishi shart'); return; }
+  try {
+    await api('/promos', { method: 'POST', body: JSON.stringify(data) });
+    closeModal(); tg.showAlert('✅ Promo yaratildi'); loadPromos();
+  } catch(e) { tg.showAlert('❌ ' + e.message); }
+}
+
+async function updatePromo(id) {
+  const data = promoFormData();
+  try {
+    await api(`/promos/${id}`, { method: 'PUT', body: JSON.stringify(data) });
+    closeModal(); tg.showAlert('✅ Saqlandi'); loadPromos();
+  } catch(e) { tg.showAlert('❌ ' + e.message); }
+}
+
+async function deletePromo(id) {
+  tg.showConfirm('Promoni o\'chirmoqchimisiz?', async confirmed => {
+    if (!confirmed) return;
+    try {
+      await api(`/promos/${id}`, { method: 'DELETE' });
+      tg.showAlert('✅ O\'chirildi'); loadPromos();
+    } catch(e) { tg.showAlert('❌ ' + e.message); }
+  });
+}
+
+// ── Tabs ────────────────────────────────────────────────────────────
+const TABS = ['stats','clinics','payments','plans','promos'];
+let curTab = 'stats';
+const loaded = {};
+
+function switchTab(tab) {
+  curTab = tab;
+  TABS.forEach(t => {
+    document.getElementById('sec-'+t).classList.toggle('active', t===tab);
+    document.getElementById('tab-'+t).classList.toggle('on', t===tab);
+  });
+  if (!loaded[tab]) { loaded[tab] = true; loadFn(tab); }
+}
+
+function loadFn(tab) {
+  if (tab==='stats') loadStats();
+  else if (tab==='clinics') loadClinics();
+  else if (tab==='payments') loadPayments();
+  else if (tab==='plans') loadPlans();
+  else if (tab==='promos') loadPromos();
+}
+
+function refreshTab() { delete loaded[curTab]; loadFn(curTab); }
+
+loaded['stats'] = true;
+loadStats();
+</script>
+</body>
+</html>
