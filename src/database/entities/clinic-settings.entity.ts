@@ -1,9 +1,14 @@
-import { Entity, Column, PrimaryGeneratedColumn } from 'typeorm';
+import { Entity, Column, PrimaryGeneratedColumn, ManyToOne, JoinColumn } from 'typeorm';
+import { Clinic } from './clinic.entity';
 
 @Entity('clinic_settings')
 export class ClinicSettings {
   @PrimaryGeneratedColumn()
   id: number;
+
+  @ManyToOne(() => Clinic)
+  @JoinColumn({ name: 'clinic_id' })
+  clinic: Clinic;
 
   @Column({ nullable: true })
   name: string;

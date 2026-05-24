@@ -1,5 +1,6 @@
-import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, OneToMany } from 'typeorm';
+import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, OneToMany, ManyToOne, JoinColumn } from 'typeorm';
 import { Appointment } from './appointment.entity';
+import { Clinic } from './clinic.entity';
 
 @Entity('users')
 export class User {
@@ -8,10 +9,13 @@ export class User {
 
   @Column({
     type: 'bigint',
-    unique: true,
     transformer: { to: (v: number) => v, from: (v: string) => Number(v) },
   })
   telegramId: number;
+
+  @ManyToOne(() => Clinic)
+  @JoinColumn({ name: 'clinic_id' })
+  clinic: Clinic;
 
   @Column({ nullable: true })
   fullName: string;

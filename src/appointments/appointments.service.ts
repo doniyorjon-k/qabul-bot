@@ -19,71 +19,51 @@ export class AppointmentsService {
   ) {}
 
   async create(data: Partial<Appointment>): Promise<Appointment> {
-    const appointment = this.appointmentsRepo.create(data);
-    return this.appointmentsRepo.save(appointment);
+    return this.appointmentsRepo.save(this.appointmentsRepo.create(data));
   }
 
   async findById(id: number): Promise<Appointment | null> {
-    return this.appointmentsRepo.findOne({
-      where: { id },
-      relations: ['user', 'service', 'timeSlot'],
-    });
+    return this.appointmentsRepo.findOne({ where: { id }, relations: ['user', 'service', 'timeSlot', 'clinic'] });
   }
 
-  async findByUserId(userId: number): Promise<Appointment[]> {
+  async findByUserId(userId: number, clinicId: number): Promise<Appointment[]> {
     return this.appointmentsRepo.find({
-      where: { user: { id: userId } },
+      where: { user: { id: userId }, clinic: { id: clinicId } },
       relations: ['service', 'timeSlot'],
       order: { createdAt: 'DESC' },
     });
   }
 
-  async findTodayAppointments(): Promise<Appointment[]> {
+  async findTodayAppointments(clinicId: number): Promise<Appointment[]> {
     const today = uzDateStr(uzNow());
     return this.appointmentsRepo.find({
-      where: {
-        timeSlot: { date: today },
-        status: AppointmentStatus.CONFIRMED,
-      },
+      where: { clinic: { id: clinicId }, timeSlot: { date: today }, status: AppointmentStatus.CONFIRMED },
       relations: ['user', 'service', 'timeSlot'],
       order: { timeSlot: { time: 'ASC' } },
     });
   }
 
-  async findWeekAppointments(): Promise<Appointment[]> {
-    const today = new Date();
-    const weekEnd = new Date();
-    weekEnd.setDate(today.getDate() + 7);
-
+  async findWeekAppointments(clinicId: number): Promise<Appointment[]> {
     return this.appointmentsRepo.find({
-      where: {
-        status: AppointmentStatus.CONFIRMED,
-      },
+      where: { clinic: { id: clinicId }, status: AppointmentStatus.CONFIRMED },
       relations: ['user', 'service', 'timeSlot'],
       order: { timeSlot: { date: 'ASC', time: 'ASC' } },
     });
   }
 
-  async findUpcomingByUser(userId: number): Promise<Appointment[]> {
+  async findUpcomingByUser(userId: number, clinicId: number): Promise<Appointment[]> {
     return this.appointmentsRepo
       .createQueryBuilder('apt')
       .leftJoinAndSelect('apt.service', 'service')
       .leftJoinAndSelect('apt.timeSlot', 'slot')
       .where('apt.user_id = :userId', { userId })
+      .andWhere('apt.clinic_id = :clinicId', { clinicId })
       .andWhere('apt.status IN (:...statuses)', {
         statuses: [AppointmentStatus.PENDING, AppointmentStatus.CONFIRMED, AppointmentStatus.COMPLETED],
       })
       .orderBy('slot.date', 'DESC')
       .addOrderBy('slot.time', 'DESC')
       .getMany();
-  }
-
-  async findPendingByAdmin(): Promise<Appointment[]> {
-    return this.appointmentsRepo.find({
-      where: { status: AppointmentStatus.PENDING },
-      relations: ['user', 'service', 'timeSlot'],
-      order: { createdAt: 'ASC' },
-    });
   }
 
   async cancel(id: number, reason?: string): Promise<void> {
@@ -101,32 +81,22 @@ export class AppointmentsService {
     await this.appointmentsRepo.update(id, { status: AppointmentStatus.COMPLETED });
   }
 
-  async getPendingReminders1Day(): Promise<Appointment[]> {
+  async getPendingReminders1Day(clinicId: number): Promise<Appointment[]> {
     const tomorrowUz = new Date(uzNow().getTime() + 24 * 60 * 60 * 1000);
     const tomorrowStr = uzDateStr(tomorrowUz);
-
     return this.appointmentsRepo.find({
-      where: {
-        timeSlot: { date: tomorrowStr },
-        status: AppointmentStatus.CONFIRMED,
-        reminder1DaySent: false,
-      },
+      where: { clinic: { id: clinicId }, timeSlot: { date: tomorrowStr }, status: AppointmentStatus.CONFIRMED, reminder1DaySent: false },
       relations: ['user', 'service', 'timeSlot'],
     });
   }
 
-  async getPendingReminders2Hours(): Promise<Appointment[]> {
+  async getPendingReminders2Hours(clinicId: number): Promise<Appointment[]> {
     const nowUz = uzNow();
     const in2HoursUz = new Date(nowUz.getTime() + 2 * 60 * 60 * 1000);
     const todayStr = uzDateStr(nowUz);
     const timeStr = `${String(in2HoursUz.getUTCHours()).padStart(2, '0')}:${String(in2HoursUz.getUTCMinutes()).padStart(2, '0')}`;
-
     return this.appointmentsRepo.find({
-      where: {
-        timeSlot: { date: todayStr, time: timeStr },
-        status: AppointmentStatus.CONFIRMED,
-        reminder2HourSent: false,
-      },
+      where: { clinic: { id: clinicId }, timeSlot: { date: todayStr, time: timeStr }, status: AppointmentStatus.CONFIRMED, reminder2HourSent: false },
       relations: ['user', 'service', 'timeSlot'],
     });
   }
@@ -139,21 +109,14 @@ export class AppointmentsService {
     await this.appointmentsRepo.update(id, { reminder2HourSent: true });
   }
 
-  async getPendingReminders10Min(): Promise<Appointment[]> {
+  async getPendingReminders10Min(clinicId: number): Promise<Appointment[]> {
     const now = new Date();
     const in10Min = new Date(now.getTime() + 10 * 60 * 1000);
     const todayStr = uzDateStr(uzNow());
-
     const candidates = await this.appointmentsRepo.find({
-      where: {
-        status: AppointmentStatus.CONFIRMED,
-        reminder10MinSent: false,
-        reminder2HourSent: false,
-        timeSlot: { date: todayStr },
-      },
+      where: { clinic: { id: clinicId }, status: AppointmentStatus.CONFIRMED, reminder10MinSent: false, reminder2HourSent: false, timeSlot: { date: todayStr } },
       relations: ['user', 'service', 'timeSlot'],
     });
-
     return candidates.filter((apt) => {
       const aptTime = new Date(`${apt.timeSlot.date}T${apt.timeSlot.time}:00+05:00`);
       return aptTime > now && aptTime <= in10Min;
@@ -164,19 +127,13 @@ export class AppointmentsService {
     await this.appointmentsRepo.update(id, { reminder10MinSent: true });
   }
 
-  async getPendingReviewRequests(): Promise<Appointment[]> {
+  async getPendingReviewRequests(clinicId: number): Promise<Appointment[]> {
     const now = new Date();
-    const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-    const sevenDaysAgoStr = sevenDaysAgo.toISOString().split('T')[0];
-
+    const sevenDaysAgoStr = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
     const candidates = await this.appointmentsRepo.find({
-      where: {
-        status: AppointmentStatus.CONFIRMED,
-        reviewRequestSent: false,
-      },
+      where: { clinic: { id: clinicId }, status: AppointmentStatus.CONFIRMED, reviewRequestSent: false },
       relations: ['user', 'service', 'timeSlot'],
     });
-
     return candidates.filter((apt) => {
       if (!apt.timeSlot?.date || !apt.timeSlot?.time) return false;
       if (apt.timeSlot.date < sevenDaysAgoStr) return false;
@@ -189,28 +146,38 @@ export class AppointmentsService {
     await this.appointmentsRepo.update(id, { reviewRequestSent: true });
   }
 
-  async findAllForAdmin(limit = 50): Promise<Appointment[]> {
+  async findPendingByAdmin(clinicId: number): Promise<Appointment[]> {
     return this.appointmentsRepo.find({
+      where: { clinic: { id: clinicId }, status: AppointmentStatus.PENDING },
+      relations: ['user', 'service', 'timeSlot'],
+      order: { createdAt: 'ASC' },
+    });
+  }
+
+  async findAllForAdmin(clinicId: number, limit = 50): Promise<Appointment[]> {
+    return this.appointmentsRepo.find({
+      where: { clinic: { id: clinicId } },
       relations: ['service', 'timeSlot', 'user'],
       order: { createdAt: 'DESC' },
       take: limit,
     });
   }
 
-  async searchAppointments(query: string): Promise<Appointment[]> {
+  async searchAppointments(clinicId: number, query: string): Promise<Appointment[]> {
     return this.appointmentsRepo
       .createQueryBuilder('apt')
       .leftJoinAndSelect('apt.service', 'service')
       .leftJoinAndSelect('apt.timeSlot', 'slot')
       .leftJoinAndSelect('apt.user', 'user')
-      .where('apt.clientName ILIKE :q OR apt.clientPhone ILIKE :q', { q: `%${query}%` })
+      .where('apt.clinic_id = :clinicId', { clinicId })
+      .andWhere('apt.clientName ILIKE :q OR apt.clientPhone ILIKE :q', { q: `%${query}%` })
       .orderBy('slot.date', 'DESC')
       .addOrderBy('slot.time', 'DESC')
       .take(30)
       .getMany();
   }
 
-  async getMonthlyStats(): Promise<{ month: string; count: number }[]> {
+  async getMonthlyStats(clinicId: number): Promise<{ month: string; count: number }[]> {
     const fromDate = new Date(uzNow());
     fromDate.setMonth(fromDate.getMonth() - 5);
     const fromStr = uzDateStr(fromDate).substring(0, 7) + '-01';
@@ -220,9 +187,8 @@ export class AppointmentsService {
       .innerJoin('apt.timeSlot', 'slot')
       .select("TO_CHAR(slot.date::date, 'YYYY-MM')", 'month')
       .addSelect('COUNT(apt.id)::int', 'cnt')
-      .where('apt.status IN (:...statuses)', {
-        statuses: [AppointmentStatus.CONFIRMED, AppointmentStatus.COMPLETED],
-      })
+      .where('apt.clinic_id = :clinicId', { clinicId })
+      .andWhere('apt.status IN (:...statuses)', { statuses: [AppointmentStatus.CONFIRMED, AppointmentStatus.COMPLETED] })
       .andWhere('slot.date >= :fromStr', { fromStr })
       .groupBy("TO_CHAR(slot.date::date, 'YYYY-MM')")
       .orderBy("TO_CHAR(slot.date::date, 'YYYY-MM')", 'ASC')
@@ -231,22 +197,24 @@ export class AppointmentsService {
     return rows.map(r => ({ month: r.month, count: r.cnt }));
   }
 
-  async getStats(): Promise<{ total: number; confirmed: number; cancelled: number; completed: number }> {
-    const nowUzStr = uzDateStr(uzNow()) + ' ' + `${String(uzNow().getUTCHours()).padStart(2,'0')}:${String(uzNow().getUTCMinutes()).padStart(2,'0')}`;
+  async getStats(clinicId: number): Promise<{ total: number; confirmed: number; cancelled: number; completed: number }> {
+    const nowUzStr = uzDateStr(uzNow()) + ' ' + `${String(uzNow().getUTCHours()).padStart(2, '0')}:${String(uzNow().getUTCMinutes()).padStart(2, '0')}`;
 
     const [total, cancelled, upcoming, done] = await Promise.all([
-      this.appointmentsRepo.count(),
-      this.appointmentsRepo.count({ where: { status: AppointmentStatus.CANCELLED } }),
+      this.appointmentsRepo.count({ where: { clinic: { id: clinicId } } }),
+      this.appointmentsRepo.count({ where: { clinic: { id: clinicId }, status: AppointmentStatus.CANCELLED } }),
       this.appointmentsRepo
         .createQueryBuilder('apt')
         .innerJoin('apt.timeSlot', 'slot')
-        .where('apt.status = :s', { s: AppointmentStatus.CONFIRMED })
+        .where('apt.clinic_id = :clinicId', { clinicId })
+        .andWhere('apt.status = :s', { s: AppointmentStatus.CONFIRMED })
         .andWhere("slot.date || ' ' || slot.time > :now", { now: nowUzStr })
         .getCount(),
       this.appointmentsRepo
         .createQueryBuilder('apt')
         .innerJoin('apt.timeSlot', 'slot')
-        .where('apt.status = :s', { s: AppointmentStatus.CONFIRMED })
+        .where('apt.clinic_id = :clinicId', { clinicId })
+        .andWhere('apt.status = :s', { s: AppointmentStatus.CONFIRMED })
         .andWhere("slot.date || ' ' || slot.time <= :now", { now: nowUzStr })
         .getCount(),
     ]);

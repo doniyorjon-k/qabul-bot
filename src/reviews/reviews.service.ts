@@ -10,7 +10,7 @@ export class ReviewsService {
     private readonly repo: Repository<Review>,
   ) {}
 
-  async create(data: {
+  async create(clinicId: number, data: {
     telegramId: number;
     rating: number;
     comment?: string;
@@ -18,16 +18,17 @@ export class ReviewsService {
     serviceName?: string;
     appointmentDate?: string;
   }): Promise<Review> {
-    return this.repo.save(this.repo.create(data));
+    return this.repo.save(this.repo.create({ ...data, clinic: { id: clinicId } as any }));
   }
 
-  async findAll(limit = 20): Promise<Review[]> {
-    return this.repo.find({ order: { createdAt: 'DESC' }, take: limit });
+  async findAll(clinicId: number, limit = 20): Promise<Review[]> {
+    return this.repo.find({ where: { clinic: { id: clinicId } }, order: { createdAt: 'DESC' }, take: limit });
   }
 
-  async getStats(): Promise<{ total: number; avg: number }> {
+  async getStats(clinicId: number): Promise<{ total: number; avg: number }> {
     const result = await this.repo
       .createQueryBuilder('r')
+      .where('r.clinic_id = :clinicId', { clinicId })
       .select('COUNT(*)', 'total')
       .addSelect('AVG(r.rating)', 'avg')
       .getRawOne();

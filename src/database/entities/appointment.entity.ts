@@ -5,6 +5,7 @@ import {
 import { User } from './user.entity';
 import { Service } from './service.entity';
 import { TimeSlot } from './time-slot.entity';
+import { Clinic } from './clinic.entity';
 
 export enum AppointmentStatus {
   PENDING = 'pending',
@@ -17,6 +18,10 @@ export enum AppointmentStatus {
 export class Appointment {
   @PrimaryGeneratedColumn()
   id: number;
+
+  @ManyToOne(() => Clinic)
+  @JoinColumn({ name: 'clinic_id' })
+  clinic: Clinic;
 
   @ManyToOne(() => User, (user) => user.appointments)
   @JoinColumn({ name: 'user_id' })
@@ -39,11 +44,7 @@ export class Appointment {
   @Column({ nullable: true })
   note: string;
 
-  @Column({
-    type: 'enum',
-    enum: AppointmentStatus,
-    default: AppointmentStatus.PENDING,
-  })
+  @Column({ type: 'enum', enum: AppointmentStatus, default: AppointmentStatus.PENDING })
   status: AppointmentStatus;
 
   @Column({ default: false })

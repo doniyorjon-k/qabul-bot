@@ -2,115 +2,130 @@ import {
   Controller, Get, Post, Put, Param, Body, Query,
   Headers, UnauthorizedException, BadRequestException, ParseIntPipe,
 } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
 import { createHmac } from 'crypto';
-import { InjectBot } from 'nestjs-telegraf';
-import { Telegraf } from 'telegraf';
 import { AppointmentsService } from '../appointments/appointments.service';
 import { TimeSlotsService } from '../time-slots/time-slots.service';
 import { UsersService } from '../users/users.service';
 import { ReviewsService } from '../reviews/reviews.service';
 import { WorkScheduleService } from '../work-schedule/work-schedule.service';
 import { ClinicSettingsService } from '../clinic-settings/clinic-settings.service';
+import { ClinicsService } from '../clinics/clinics.service';
+import { ClinicBotsService } from '../clinic-bots/clinic-bots.service';
 
 @Controller('api/admin')
 export class AdminApiController {
-  private readonly adminIds: number[];
-
   constructor(
-    private readonly configService: ConfigService,
     private readonly appointmentsService: AppointmentsService,
     private readonly timeSlotsService: TimeSlotsService,
     private readonly usersService: UsersService,
     private readonly reviewsService: ReviewsService,
     private readonly workScheduleService: WorkScheduleService,
     private readonly clinicSettingsService: ClinicSettingsService,
-    @InjectBot() private readonly bot: Telegraf,
-  ) {
-    this.adminIds = configService.get<number[]>('bot.adminIds') || [];
-  }
+    private readonly clinicsService: ClinicsService,
+    private readonly clinicBotsService: ClinicBotsService,
+  ) {}
 
-  private validateAdmin(initData: string): number {
+  private async validateAdmin(initData: string, clinicIdHeader: string): Promise<number> {
     if (!initData) throw new UnauthorizedException('initData yo\'q');
+    if (!clinicIdHeader) throw new UnauthorizedException('x-clinic-id yo\'q');
+
+    const clinicId = parseInt(clinicIdHeader, 10);
+    if (isNaN(clinicId)) throw new UnauthorizedException('Noto\'g\'ri clinic id');
+
+    const clinic = await this.clinicsService.findById(clinicId);
+    if (!clinic) throw new UnauthorizedException('Klinika topilmadi');
 
     const params = new URLSearchParams(initData);
     const hash = params.get('hash');
     if (!hash) throw new UnauthorizedException('hash yo\'q');
-
     params.delete('hash');
     const dataCheckString = [...params.entries()]
       .sort(([a], [b]) => a.localeCompare(b))
       .map(([k, v]) => `${k}=${v}`)
       .join('\n');
 
-    const token = this.configService.get<string>('bot.token');
-    const secretKey = createHmac('sha256', 'WebAppData').update(token).digest();
+    const secretKey = createHmac('sha256', 'WebAppData').update(clinic.botToken).digest();
     const expectedHash = createHmac('sha256', secretKey).update(dataCheckString).digest('hex');
-
     if (expectedHash !== hash) throw new UnauthorizedException('Noto\'g\'ri initData');
 
     const userStr = params.get('user');
     if (!userStr) throw new UnauthorizedException('user yo\'q');
-
     const user = JSON.parse(userStr);
-    if (!this.adminIds.includes(user.id)) throw new UnauthorizedException('Admin emas');
+    if (!clinic.adminIds.includes(user.id)) throw new UnauthorizedException('Admin emas');
 
-    return user.id;
+    return clinicId;
   }
 
   @Get('stats')
-  async getStats(@Headers('x-init-data') initData: string) {
-    this.validateAdmin(initData);
+  async getStats(
+    @Headers('x-init-data') initData: string,
+    @Headers('x-clinic-id') clinicIdHeader: string,
+  ) {
+    const clinicId = await this.validateAdmin(initData, clinicIdHeader);
     const [stats, users, reviewStats, monthly] = await Promise.all([
-      this.appointmentsService.getStats(),
-      this.usersService.count(),
-      this.reviewsService.getStats(),
-      this.appointmentsService.getMonthlyStats(),
+      this.appointmentsService.getStats(clinicId),
+      this.usersService.count(clinicId),
+      this.reviewsService.getStats(clinicId),
+      this.appointmentsService.getMonthlyStats(clinicId),
     ]);
     return { ...stats, users, reviewStats, monthly };
   }
 
   @Get('appointments/today')
-  async getToday(@Headers('x-init-data') initData: string) {
-    this.validateAdmin(initData);
-    return this.appointmentsService.findTodayAppointments();
+  async getToday(
+    @Headers('x-init-data') initData: string,
+    @Headers('x-clinic-id') clinicIdHeader: string,
+  ) {
+    const clinicId = await this.validateAdmin(initData, clinicIdHeader);
+    return this.appointmentsService.findTodayAppointments(clinicId);
   }
 
   @Get('appointments/week')
-  async getWeek(@Headers('x-init-data') initData: string) {
-    this.validateAdmin(initData);
-    return this.appointmentsService.findWeekAppointments();
+  async getWeek(
+    @Headers('x-init-data') initData: string,
+    @Headers('x-clinic-id') clinicIdHeader: string,
+  ) {
+    const clinicId = await this.validateAdmin(initData, clinicIdHeader);
+    return this.appointmentsService.findWeekAppointments(clinicId);
   }
 
   @Get('appointments/all')
-  async getAll(@Headers('x-init-data') initData: string) {
-    this.validateAdmin(initData);
-    return this.appointmentsService.findAllForAdmin();
+  async getAll(
+    @Headers('x-init-data') initData: string,
+    @Headers('x-clinic-id') clinicIdHeader: string,
+  ) {
+    const clinicId = await this.validateAdmin(initData, clinicIdHeader);
+    return this.appointmentsService.findAllForAdmin(clinicId);
   }
 
   @Get('appointments/search')
   async search(
     @Headers('x-init-data') initData: string,
+    @Headers('x-clinic-id') clinicIdHeader: string,
     @Query('q') q: string,
   ) {
-    this.validateAdmin(initData);
+    const clinicId = await this.validateAdmin(initData, clinicIdHeader);
     if (!q || q.trim().length < 2) return [];
-    return this.appointmentsService.searchAppointments(q.trim());
+    return this.appointmentsService.searchAppointments(clinicId, q.trim());
   }
 
   @Get('reviews')
-  async getReviews(@Headers('x-init-data') initData: string) {
-    this.validateAdmin(initData);
-    return this.reviewsService.findAll(50);
+  async getReviews(
+    @Headers('x-init-data') initData: string,
+    @Headers('x-clinic-id') clinicIdHeader: string,
+  ) {
+    const clinicId = await this.validateAdmin(initData, clinicIdHeader);
+    return this.reviewsService.findAll(clinicId, 50);
   }
 
   @Post('appointments/:id/cancel')
   async cancelApt(
     @Headers('x-init-data') initData: string,
+    @Headers('x-clinic-id') clinicIdHeader: string,
     @Param('id', ParseIntPipe) id: number,
     @Body('reason') reason?: string,
   ) {
-    this.validateAdmin(initData);
+    const clinicId = await this.validateAdmin(initData, clinicIdHeader);
     const apt = await this.appointmentsService.findById(id);
     if (!apt) throw new BadRequestException('Topilmadi');
 
@@ -124,7 +139,8 @@ export class AdminApiController {
     if (apt.timeSlot) await this.timeSlotsService.freeSlot(apt.timeSlot.id);
     try {
       const [y, m, d] = apt.timeSlot.date.split('-');
-      await this.bot.telegram.sendMessage(
+      await this.clinicBotsService.sendMessage(
+        clinicId,
         apt.user.telegramId,
         `❌ *Qabulingiz bekor qilindi*\n\n🦷 ${apt.service.name}\n📅 ${d}.${m}.${y} soat ${apt.timeSlot.time}`,
         { parse_mode: 'Markdown' },
@@ -134,61 +150,71 @@ export class AdminApiController {
   }
 
   @Get('schedule')
-  async getSchedule(@Headers('x-init-data') initData: string) {
-    this.validateAdmin(initData);
-    return this.workScheduleService.get();
+  async getSchedule(
+    @Headers('x-init-data') initData: string,
+    @Headers('x-clinic-id') clinicIdHeader: string,
+  ) {
+    const clinicId = await this.validateAdmin(initData, clinicIdHeader);
+    return this.workScheduleService.get(clinicId);
   }
 
   @Put('schedule/days')
   async saveWorkDays(
     @Headers('x-init-data') initData: string,
+    @Headers('x-clinic-id') clinicIdHeader: string,
     @Body('days') days: number[],
   ) {
-    this.validateAdmin(initData);
+    const clinicId = await this.validateAdmin(initData, clinicIdHeader);
     if (!Array.isArray(days)) throw new BadRequestException('days massiv bo\'lishi kerak');
-    await this.workScheduleService.saveWorkDays(days.map(Number));
-    await this.timeSlotsService.regenerateFutureSlots();
+    await this.workScheduleService.saveWorkDays(clinicId, days.map(Number));
+    await this.timeSlotsService.regenerateFutureSlots(clinicId);
     return { ok: true };
   }
 
   @Put('schedule/hours')
   async saveWorkHours(
     @Headers('x-init-data') initData: string,
+    @Headers('x-clinic-id') clinicIdHeader: string,
     @Body('hours') hours: string[],
   ) {
-    this.validateAdmin(initData);
+    const clinicId = await this.validateAdmin(initData, clinicIdHeader);
     if (!Array.isArray(hours)) throw new BadRequestException('hours massiv bo\'lishi kerak');
-    await this.workScheduleService.saveWorkHours(hours);
-    await this.timeSlotsService.regenerateFutureSlots();
+    await this.workScheduleService.saveWorkHours(clinicId, hours);
+    await this.timeSlotsService.regenerateFutureSlots(clinicId);
     return { ok: true };
   }
 
   @Post('schedule/toggle-date')
   async toggleDate(
     @Headers('x-init-data') initData: string,
+    @Headers('x-clinic-id') clinicIdHeader: string,
     @Body('date') date: string,
   ) {
-    this.validateAdmin(initData);
+    const clinicId = await this.validateAdmin(initData, clinicIdHeader);
     if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) throw new BadRequestException('Noto\'g\'ri sana formati');
-    const isNowWorking = await this.workScheduleService.toggleDate(date);
-    await this.timeSlotsService.regenerateFutureSlots();
+    const isNowWorking = await this.workScheduleService.toggleDate(clinicId, date);
+    await this.timeSlotsService.regenerateFutureSlots(clinicId);
     return { ok: true, isWorking: isNowWorking };
   }
 
   @Get('settings')
-  async getClinicSettings(@Headers('x-init-data') initData: string) {
-    this.validateAdmin(initData);
-    return this.clinicSettingsService.get();
+  async getClinicSettings(
+    @Headers('x-init-data') initData: string,
+    @Headers('x-clinic-id') clinicIdHeader: string,
+  ) {
+    const clinicId = await this.validateAdmin(initData, clinicIdHeader);
+    return this.clinicSettingsService.get(clinicId);
   }
 
   @Put('settings')
   async updateClinicSettings(
     @Headers('x-init-data') initData: string,
+    @Headers('x-clinic-id') clinicIdHeader: string,
     @Body() body: { name?: string; address?: string; phone?: string; telegram?: string; mapsUrl?: string; tgUrl?: string; igUrl?: string },
   ) {
-    this.validateAdmin(initData);
+    const clinicId = await this.validateAdmin(initData, clinicIdHeader);
     const { name, address, phone, telegram, mapsUrl, tgUrl, igUrl } = body;
-    await this.clinicSettingsService.update({ name, address, phone, telegram, mapsUrl, tgUrl, igUrl });
+    await this.clinicSettingsService.update(clinicId, { name, address, phone, telegram, mapsUrl, tgUrl, igUrl });
     return { ok: true };
   }
 }

@@ -1,9 +1,14 @@
-import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn } from 'typeorm';
+import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, ManyToOne, JoinColumn } from 'typeorm';
+import { Clinic } from './clinic.entity';
 
 @Entity('reviews')
 export class Review {
   @PrimaryGeneratedColumn()
   id: number;
+
+  @ManyToOne(() => Clinic)
+  @JoinColumn({ name: 'clinic_id' })
+  clinic: Clinic;
 
   @Column()
   rating: number;

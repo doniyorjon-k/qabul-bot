@@ -1,22 +1,24 @@
-import { Entity, Column, PrimaryGeneratedColumn } from 'typeorm';
+import { Entity, Column, PrimaryGeneratedColumn, ManyToOne, JoinColumn } from 'typeorm';
+import { Clinic } from './clinic.entity';
 
 @Entity('work_schedule')
 export class WorkSchedule {
   @PrimaryGeneratedColumn()
   id: number;
 
-  // Haftalik asosiy jadval: 1=Du, 2=Se, 3=Ch, 4=Pa, 5=Ju, 6=Sh, 7=Ya
+  @ManyToOne(() => Clinic)
+  @JoinColumn({ name: 'clinic_id' })
+  clinic: Clinic;
+
   @Column({ type: 'json', default: '[1,2,3,4,5,6]' })
   workDays: number[];
 
-  @Column({ type: 'json', default: '["09:00","10:00","11:00","12:00","14:00","15:00","16:00","17:00"]' })
+  @Column({ type: 'json', default: '["09:00","09:30","10:00","10:30","11:00","11:30","12:00","12:30","14:00","14:30","15:00","15:30","16:00","16:30","17:00","17:30"]' })
   workHours: string[];
 
-  // Ish kuniga to'g'ri kelib qolsa ham dam olish (bayramlar, ta'tillar)
   @Column({ type: 'json', default: '[]' })
   blockedDates: string[];
 
-  // Dam olish kuniga to'g'ri kelib qolsa ham ish kuni
   @Column({ type: 'json', default: '[]' })
   extraWorkDates: string[];
 }

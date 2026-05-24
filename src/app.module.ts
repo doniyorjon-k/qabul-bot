@@ -2,7 +2,6 @@ import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { AppController } from './app.controller';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { TelegrafModule } from 'nestjs-telegraf';
 import { ScheduleModule } from '@nestjs/schedule';
 import configuration from './config/configuration';
 import { User } from './database/entities/user.entity';
@@ -13,7 +12,11 @@ import { WorkSchedule } from './database/entities/work-schedule.entity';
 import { Faq } from './database/entities/faq.entity';
 import { ClinicSettings } from './database/entities/clinic-settings.entity';
 import { Review } from './database/entities/review.entity';
-import { BotModule } from './bot/bot.module';
+import { Clinic } from './database/entities/clinic.entity';
+import { Plan } from './database/entities/plan.entity';
+import { Promo } from './database/entities/promo.entity';
+import { Payment } from './database/entities/payment.entity';
+import { Broadcast } from './database/entities/broadcast.entity';
 import { AdminApiModule } from './admin-api/admin-api.module';
 import { FaqModule } from './faq/faq.module';
 import { ClinicSettingsModule } from './clinic-settings/clinic-settings.module';
@@ -24,6 +27,12 @@ import { AppointmentsModule } from './appointments/appointments.module';
 import { TimeSlotsModule } from './time-slots/time-slots.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { WorkScheduleModule } from './work-schedule/work-schedule.module';
+import { ClinicsModule } from './clinics/clinics.module';
+import { PlansModule } from './plans/plans.module';
+import { PromosModule } from './promos/promos.module';
+import { PaymentsModule } from './payments/payments.module';
+import { ClinicBotsModule } from './clinic-bots/clinic-bots.module';
+import { WebhookModule } from './webhook/webhook.module';
 
 @Module({
   controllers: [AppController],
@@ -44,39 +53,20 @@ import { WorkScheduleModule } from './work-schedule/work-schedule.module';
         password: config.get('database.password'),
         database: config.get('database.name'),
         ssl: process.env.DB_SSL === 'true' ? { rejectUnauthorized: false } : false,
-        entities: [User, Appointment, Service, TimeSlot, WorkSchedule, Faq, ClinicSettings, Review],
+        entities: [
+          User, Appointment, Service, TimeSlot, WorkSchedule,
+          Faq, ClinicSettings, Review, Clinic, Plan, Promo, Payment, Broadcast,
+        ],
         synchronize: true,
         logging: config.get('nodeEnv') === 'development',
       }),
       inject: [ConfigService],
     }),
 
-    TelegrafModule.forRootAsync({
-      imports: [ConfigModule],
-      useFactory: (config: ConfigService) => {
-        const token = config.get<string>('bot.token');
-        const webhookUrl = config.get<string>('webhook.url');
-
-        if (webhookUrl) {
-          return {
-            token,
-            launchOptions: {
-              webhook: {
-                domain: webhookUrl,
-                hookPath: '/webhook',
-              },
-            },
-          };
-        }
-
-        return { token };
-      },
-      inject: [ConfigService],
-    }),
-
     ScheduleModule.forRoot(),
 
-    BotModule,
+    ClinicBotsModule,
+    WebhookModule,
     AdminApiModule,
     UsersModule,
     ServicesModule,
@@ -87,6 +77,10 @@ import { WorkScheduleModule } from './work-schedule/work-schedule.module';
     FaqModule,
     ClinicSettingsModule,
     ReviewsModule,
+    ClinicsModule,
+    PlansModule,
+    PromosModule,
+    PaymentsModule,
   ],
 })
 export class AppModule {}

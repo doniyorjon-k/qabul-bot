@@ -1,10 +1,15 @@
-import { Entity, Column, PrimaryGeneratedColumn, OneToOne } from 'typeorm';
+import { Entity, Column, PrimaryGeneratedColumn, OneToOne, ManyToOne, JoinColumn } from 'typeorm';
 import { Appointment } from './appointment.entity';
+import { Clinic } from './clinic.entity';
 
 @Entity('time_slots')
 export class TimeSlot {
   @PrimaryGeneratedColumn()
   id: number;
+
+  @ManyToOne(() => Clinic)
+  @JoinColumn({ name: 'clinic_id' })
+  clinic: Clinic;
 
   @Column({ type: 'date' })
   date: string;

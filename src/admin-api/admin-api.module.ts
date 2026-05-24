@@ -6,9 +6,14 @@ import { UsersModule } from '../users/users.module';
 import { ReviewsModule } from '../reviews/reviews.module';
 import { WorkScheduleModule } from '../work-schedule/work-schedule.module';
 import { ClinicSettingsModule } from '../clinic-settings/clinic-settings.module';
+import { ClinicsModule } from '../clinics/clinics.module';
+import { ClinicBotsModule } from '../clinic-bots/clinic-bots.module';
 
 @Module({
-  imports: [AppointmentsModule, TimeSlotsModule, UsersModule, ReviewsModule, WorkScheduleModule, ClinicSettingsModule],
+  imports: [
+    AppointmentsModule, TimeSlotsModule, UsersModule, ReviewsModule,
+    WorkScheduleModule, ClinicSettingsModule, ClinicsModule, ClinicBotsModule,
+  ],
   controllers: [AdminApiController],
 })
 export class AdminApiModule {}
