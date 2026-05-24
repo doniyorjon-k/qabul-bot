@@ -58,6 +58,11 @@ export class SuperAdminBotService implements OnModuleInit {
   private setupHandlers() {
     const bot = this.bot!;
 
+    bot.catch((err: any, ctx: any) => {
+      this.logger.error(`SA bot error: ${err?.message}`, err?.stack);
+      ctx.reply(`❌ Xatolik yuz berdi:\n<code>${err?.message}</code>`, { parse_mode: 'HTML' }).catch(() => {});
+    });
+
     bot.start(async (ctx) => {
       if (!this.isSA(ctx.from.id)) return;
       await ctx.reply('🔐 *Super Admin Panel*\n\nXush kelibsiz!', {
@@ -76,7 +81,7 @@ export class SuperAdminBotService implements OnModuleInit {
       await this.replyClinicsList(ctx, false);
     });
 
-    bot.hears("💳 To'lovlar", async (ctx) => {
+    bot.hears(/To.lovlar/, async (ctx) => {
       if (!this.isSA(ctx.from.id)) return;
       await this.replyPending(ctx, false);
     });
