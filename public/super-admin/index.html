@@ -83,6 +83,15 @@ const tg = window.Telegram.WebApp;
 tg.ready(); tg.expand();
 const initData = tg.initData;
 
+if (!initData) {
+  document.body.innerHTML = `
+    <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;padding:24px;text-align:center;gap:16px">
+      <div style="font-size:48px">🔒</div>
+      <div style="font-size:16px;font-weight:600">Ruxsat yo'q</div>
+      <div style="font-size:13px;color:var(--hint)">Bu sahifani to'g'ridan-to'g'ri brauzerda ochib bo'lmaydi.<br><br>Super admin botga /start yuboring va <b>🖥 Boshqaruv Paneli</b> tugmasini bosing.</div>
+    </div>`;
+}
+
 function api(path, opts={}) {
   return fetch('/api/super-admin'+path, {
     ...opts,

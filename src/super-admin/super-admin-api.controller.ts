@@ -35,19 +35,25 @@ export class SuperAdminApiController {
   }
 
   private validate(initData: string): number {
-    if (!initData || !this.botToken) throw new ForbiddenException('Unauthorized');
-    const parsed = Object.fromEntries(new URLSearchParams(initData));
-    const hash = parsed.hash;
-    if (!hash) throw new ForbiddenException('No hash');
-    delete parsed.hash;
-    const dataStr = Object.keys(parsed).sort().map((k) => `${k}=${parsed[k]}`).join('\n');
+    if (!initData) throw new ForbiddenException('initData bo\'sh — mini appni Telegram bot orqali oching');
+    if (!this.botToken) throw new ForbiddenException('SUPER_ADMIN_BOT_TOKEN serverde sozlanmagan');
+    const params = new URLSearchParams(initData);
+    const hash = params.get('hash');
+    if (!hash) throw new ForbiddenException('hash yo\'q');
+    params.delete('hash');
+    const dataStr = Array.from(params.entries())
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([k, v]) => `${k}=${v}`)
+      .join('\n');
     const secret = createHmac('sha256', 'WebAppData').update(this.botToken).digest();
     const computed = createHmac('sha256', secret).update(dataStr).digest('hex');
-    if (computed !== hash) throw new ForbiddenException('Invalid init data');
-    const userStr = parsed.user;
-    if (!userStr) throw new ForbiddenException('No user');
+    if (computed !== hash) throw new ForbiddenException('HMAC mos kelmadi — bot token noto\'g\'ri yoki initData buzilgan');
+    const userStr = params.get('user');
+    if (!userStr) throw new ForbiddenException('user maydoni yo\'q');
     const user = JSON.parse(userStr);
-    if (!this.adminIds.includes(user.id)) throw new ForbiddenException('Not super admin');
+    if (!this.adminIds.includes(user.id)) {
+      throw new ForbiddenException(`ID ${user.id} SUPER_ADMIN_IDS da yo'q (hozir: ${this.adminIds.join(',')||'bo\'sh'})`);
+    }
     return user.id;
   }
 
