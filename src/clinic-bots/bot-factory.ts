@@ -502,22 +502,18 @@ export function setupBotHandlers(
   });
 
   // ── /admin buyrug'i ───────────────────────────────────────────────
+  const miniAppUrl = appUrl ? `${appUrl}/admin/?clinicId=${clinicId}` : undefined;
+
   bot.command('admin', async (ctx) => {
     if (!isAdmin(ctx.from.id)) { await ctx.reply('⛔ Sizda admin huquqi yo\'q.'); return; }
-    const kb = appUrl
-      ? Markup.inlineKeyboard([
-          [Markup.button.webApp('🌐 Mini App ochish', `${appUrl}/admin/?clinicId=${clinicId}`)],
-          ...adminMainKb().reply_markup.inline_keyboard,
-        ])
-      : adminMainKb();
-    await ctx.reply('👨‍⚕️ *Admin panel*', { parse_mode: 'Markdown', ...kb });
+    await ctx.reply('👨‍⚕️ *Admin panel*', { parse_mode: 'Markdown', ...adminMainKb(miniAppUrl) });
   });
 
   bot.action('adm:back', async (ctx) => {
     await ctx.answerCbQuery();
     if (!isAdmin(ctx.from.id)) return;
     delASess(ctx.from.id);
-    await ctx.editMessageText('👨‍⚕️ *Admin panel*', { parse_mode: 'Markdown', ...adminMainKb() });
+    await ctx.editMessageText('👨‍⚕️ *Admin panel*', { parse_mode: 'Markdown', ...adminMainKb(miniAppUrl) });
   });
 
   // ── /paid command ─────────────────────────────────────────────────
@@ -619,7 +615,7 @@ export function setupBotHandlers(
   bot.action('adm:bc:cancel', async (ctx) => {
     await ctx.answerCbQuery();
     delASess(ctx.from.id);
-    await ctx.editMessageText('👨‍⚕️ *Admin panel*', { parse_mode: 'Markdown', ...adminMainKb() });
+    await ctx.editMessageText('👨‍⚕️ *Admin panel*', { parse_mode: 'Markdown', ...adminMainKb(miniAppUrl) });
   });
 
   bot.action('adm:bc:confirm', async (ctx) => {
@@ -1506,14 +1502,16 @@ export function setupBotHandlers(
 
 // ── Keyboard builders ─────────────────────────────────────────────
 
-function adminMainKb() {
-  return Markup.inlineKeyboard([
+function adminMainKb(miniAppUrl?: string) {
+  const rows: any[] = [];
+  if (miniAppUrl) rows.push([Markup.button.webApp('🌐 Mini App ochish', miniAppUrl)]);
+  rows.push(
     [Markup.button.callback('📋 Bugungi qabullar', 'adm:today'), Markup.button.callback('📅 Haftalik jadval', 'adm:week')],
     [Markup.button.callback('📊 Statistika', 'adm:stats'), Markup.button.callback('💬 Mijozlar fikri', 'adm:reviews')],
-    [Markup.button.callback('⏳ Tasdiq kutayotganlar', 'adm:pending')],
     [Markup.button.callback('⏰ Ish vaqtini sozla', 'adm:schedule'), Markup.button.callback('⚙️ Sozlamalar', 'adm:settings')],
     [Markup.button.callback('📢 Foydalanuvchilarga xabar yuborish', 'adm:broadcast')],
-  ]);
+  );
+  return Markup.inlineKeyboard(rows);
 }
 
 async function buildAdminCalendarKeyboard(year: number, month: number, schedule: any) {
