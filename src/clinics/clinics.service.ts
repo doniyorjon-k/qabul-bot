@@ -130,7 +130,7 @@ export class ClinicsService implements OnModuleInit {
     await this.repo.update(id, { adminIds });
   }
 
-  async addDays(id: number, days: number): Promise<Clinic> {
+  async addDays(id: number, days: number, planName?: string): Promise<Clinic> {
     const clinic = await this.repo.findOne({ where: { id } });
     const base = clinic.subscriptionEndsAt && clinic.subscriptionEndsAt > new Date()
       ? clinic.subscriptionEndsAt
@@ -142,6 +142,7 @@ export class ClinicsService implements OnModuleInit {
       notified7Days: false,
       notified3Days: false,
       notified1Day: false,
+      ...(planName ? { currentPlan: planName } : {}),
     });
     return this.repo.findOne({ where: { id } });
   }

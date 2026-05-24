@@ -4,6 +4,7 @@ import { Markup } from 'telegraf';
 import { AppointmentsService } from '../appointments/appointments.service';
 import { ClinicsService } from '../clinics/clinics.service';
 import { ClinicBotsService } from '../clinic-bots/clinic-bots.service';
+import { SuperAdminBotService } from '../super-admin/super-admin-bot.service';
 import { ClinicStatus } from '../database/entities/clinic.entity';
 import { fmtTime } from '../bot/keyboards/calendar.keyboard';
 
@@ -15,6 +16,7 @@ export class NotificationsService {
     private readonly clinicBotsService: ClinicBotsService,
     private readonly appointmentsService: AppointmentsService,
     private readonly clinicsService: ClinicsService,
+    private readonly superAdminBotService: SuperAdminBotService,
   ) {}
 
   @Cron('*/10 * * * *')
@@ -139,6 +141,10 @@ export class NotificationsService {
           await this.clinicsService.update(clinic.id, { status: ClinicStatus.EXPIRED });
           await this.clinicBotsService.stopBot(clinic.id);
           this.logger.log(`Clinic ${clinic.id} EXPIRED and bot stopped`);
+          await this.superAdminBotService.notify(
+            `🚨 *Klinika tugadi!*\n\n🏥 ${clinic.name} (ID: ${clinic.id})\n\nObuna to'lanmadi — bot to'xtatildi.`,
+            { parse_mode: 'Markdown' },
+          );
         }
       }
     }

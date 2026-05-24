@@ -3,6 +3,8 @@ import {
   Body, Param, ParseIntPipe, Headers,
   ForbiddenException, BadRequestException,
 } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
 import { ConfigService } from '@nestjs/config';
 import { createHmac } from 'crypto';
 import { ClinicsService } from '../clinics/clinics.service';
@@ -11,6 +13,7 @@ import { PlansService } from '../plans/plans.service';
 import { PromosService } from '../promos/promos.service';
 import { SuperAdminBotService } from './super-admin-bot.service';
 import { ClinicBotsService } from '../clinic-bots/clinic-bots.service';
+import { Broadcast } from '../database/entities/broadcast.entity';
 
 @Controller('api/super-admin')
 export class SuperAdminApiController {
@@ -25,6 +28,7 @@ export class SuperAdminApiController {
     private readonly promosService: PromosService,
     private readonly superAdminBotService: SuperAdminBotService,
     private readonly clinicBotsService: ClinicBotsService,
+    @InjectRepository(Broadcast) private readonly broadcastRepo: Repository<Broadcast>,
   ) {
     this.botToken = configService.get<string>('superAdmin.botToken') || '';
     this.adminIds = configService.get<number[]>('superAdmin.ids') || [];
@@ -143,7 +147,7 @@ export class SuperAdminApiController {
   async confirm(@Param('id', ParseIntPipe) id: number, @Headers('x-init-data') d: string) {
     const adminId = this.validate(d);
     const payment = await this.paymentsService.confirm(id, adminId);
-    await this.clinicsService.addDays(payment.clinic.id, payment.plan.durationDays);
+    await this.clinicsService.addDays(payment.clinic.id, payment.plan.durationDays, payment.plan.name);
     const clinic = await this.clinicsService.findById(payment.clinic.id);
     await this.clinicBotsService.startBot(clinic);
     for (const aid of payment.clinic.adminIds) {
@@ -239,6 +243,11 @@ export class SuperAdminApiController {
         } catch {}
       }
     }
+    await this.broadcastRepo.save(this.broadcastRepo.create({
+      message: body.message,
+      target: body.target || 'all',
+      sentCount: sent,
+    }));
     return { ok: true, sent };
   }
 }

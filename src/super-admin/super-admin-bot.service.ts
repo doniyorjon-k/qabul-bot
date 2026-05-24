@@ -303,7 +303,7 @@ export class SuperAdminBotService implements OnModuleInit {
       return;
     }
     const confirmed = await this.paymentsService.confirm(paymentId, ctx.from.id);
-    await this.clinicsService.addDays(confirmed.clinic.id, confirmed.plan.durationDays);
+    await this.clinicsService.addDays(confirmed.clinic.id, confirmed.plan.durationDays, confirmed.plan.name);
 
     const clinic = await this.clinicsService.findById(confirmed.clinic.id);
     await this.clinicBotsService.startBot(clinic);
