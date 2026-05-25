@@ -59,6 +59,14 @@
   <div class="modal-box" id="modal-body"></div>
 </div>
 
+<!-- Custom Alert / Confirm overlay (no X button) -->
+<div id="custom-alert" style="position:fixed;inset:0;z-index:100;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center;padding:24px">
+  <div style="background:var(--bg2);border-radius:16px;padding:24px;max-width:320px;width:100%">
+    <p id="custom-alert-msg" style="margin:0 0 20px;font-size:15px;line-height:1.5;white-space:pre-wrap"></p>
+    <div id="custom-alert-btns"></div>
+  </div>
+</div>
+
 <!-- Tab Bar -->
 <nav class="tab-bar">
   <button class="tab on" id="tab-stats" onclick="switchTab('stats')">
@@ -82,6 +90,30 @@
 const tg = window.Telegram.WebApp;
 tg.ready(); tg.expand();
 const initData = tg.initData;
+
+let _alertCb = null;
+function showCustomAlert(msg, cb) {
+  _alertCb = cb || null;
+  document.getElementById('custom-alert-msg').textContent = msg;
+  document.getElementById('custom-alert-btns').innerHTML =
+    `<button class="btn-primary" style="width:100%" onclick="closeCustomAlert(true)">Yopish</button>`;
+  document.getElementById('custom-alert').style.display = 'flex';
+}
+function showCustomConfirm(msg, cb) {
+  _alertCb = cb || null;
+  document.getElementById('custom-alert-msg').textContent = msg;
+  document.getElementById('custom-alert-btns').innerHTML = `
+    <div style="display:flex;gap:8px">
+      <button class="btn-gray" style="flex:1" onclick="closeCustomAlert(false)">Bekor</button>
+      <button class="btn-primary" style="flex:1" onclick="closeCustomAlert(true)">Tasdiqlash</button>
+    </div>`;
+  document.getElementById('custom-alert').style.display = 'flex';
+}
+function closeCustomAlert(result) {
+  document.getElementById('custom-alert').style.display = 'none';
+  const cb = _alertCb; _alertCb = null;
+  if (cb) cb(result);
+}
 
 if (!initData) {
   document.body.innerHTML = `
@@ -248,48 +280,48 @@ async function clinicAction(id, action) {
   try {
     await api(`/clinics/${id}/${action}`, { method: 'POST' });
     closeModal();
-    tg.showAlert('✅ Amalga oshirildi');
+    showCustomAlert('✅ Amalga oshirildi');
     allClinics = await api('/clinics');
     renderClinics();
-  } catch(e) { tg.showAlert('❌ ' + e.message); }
+  } catch(e) { showCustomAlert('❌ ' + e.message); }
 }
 
 async function deleteClinic(id) {
   const c = allClinics.find(x => x.id === id);
-  tg.showConfirm(`"${c?.name}" klinikasini arxivlaysizmi?\n\nBot to'xtatiladi. Keyin arxivdan tiklash mumkin.`, async (ok) => {
+  showCustomConfirm(`"${c?.name}" klinikasini arxivlaysizmi?\n\nBot to'xtatiladi. Keyin arxivdan tiklash mumkin.`, async (ok) => {
     if (!ok) return;
     try {
       await api(`/clinics/${id}`, { method: 'DELETE' });
       closeModal();
-      tg.showAlert('🗄 Klinika arxivlandi');
+      showCustomAlert('🗄 Klinika arxivlandi');
       [allClinics, archivedClinics] = await Promise.all([api('/clinics'), api('/clinics/archived').catch(()=>[])]);
       renderClinics();
-    } catch(e) { tg.showAlert('❌ ' + e.message); }
+    } catch(e) { showCustomAlert('❌ ' + e.message); }
   });
 }
 
 async function permanentDeleteClinic(id, name) {
-  tg.showConfirm(`⚠️ "${name}" klinikasini BUTUNLAY o'chirasizmi?\n\nBarcha ma'lumotlar (qabullar, sozlamalar, xizmatlar) o'chib ketadi. Bu amalni QAYTARIB BO'LMAYDI!`, async (ok) => {
+  showCustomConfirm(`⚠️ "${name}" klinikasini BUTUNLAY o'chirasizmi?\n\nBarcha ma'lumotlar (qabullar, sozlamalar, xizmatlar) o'chib ketadi. Bu amalni QAYTARIB BO'LMAYDI!`, async (ok) => {
     if (!ok) return;
     try {
       await api(`/clinics/${id}/permanent`, { method: 'DELETE' });
-      tg.showAlert('🗑 Klinika butunlay o\'chirildi');
+      showCustomAlert('🗑 Klinika butunlay o\'chirildi');
       [allClinics, archivedClinics] = await Promise.all([api('/clinics'), api('/clinics/archived').catch(()=>[])]);
       renderClinics();
-    } catch(e) { tg.showAlert('❌ ' + e.message); }
+    } catch(e) { showCustomAlert('❌ ' + e.message); }
   });
 }
 
 async function restoreClinic(id, name) {
-  tg.showConfirm(`"${name}" klinikasini tiklamoqchimisiz?`, async (ok) => {
+  showCustomConfirm(`"${name}" klinikasini tiklamoqchimisiz?`, async (ok) => {
     if (!ok) return;
     try {
       await api(`/clinics/${id}/restore`, { method: 'POST' });
-      tg.showAlert('✅ Klinika tiklandi');
+      showCustomAlert('✅ Klinika tiklandi');
       [allClinics, archivedClinics] = await Promise.all([api('/clinics'), api('/clinics/archived').catch(()=>[])]);
       clinicFilter = 'all';
       renderClinics();
-    } catch(e) { tg.showAlert('❌ ' + e.message); }
+    } catch(e) { showCustomAlert('❌ ' + e.message); }
   });
 }
 
@@ -326,7 +358,7 @@ async function saveClinicEdit(id) {
   const adminsRaw = document.getElementById('ec-admins').value.trim();
   const trialVal = document.getElementById('ec-trial').value;
   const subVal = document.getElementById('ec-sub').value;
-  if (!name || !botToken) { tg.showAlert('Nom va token kiritilishi shart'); return; }
+  if (!name || !botToken) { showCustomAlert('Nom va token kiritilishi shart'); return; }
   const adminIds = adminsRaw ? adminsRaw.split(',').map(Number).filter(Boolean) : [];
   const body = {
     name, botToken,
@@ -338,10 +370,10 @@ async function saveClinicEdit(id) {
   try {
     await api(`/clinics/${id}`, { method: 'PUT', body: JSON.stringify(body) });
     closeModal();
-    tg.showAlert('✅ Saqlandi');
+    showCustomAlert('✅ Saqlandi');
     allClinics = await api('/clinics');
     renderClinics();
-  } catch(e) { tg.showAlert('❌ ' + e.message); }
+  } catch(e) { showCustomAlert('❌ ' + e.message); }
 }
 
 function openNewClinicModal() {
@@ -369,15 +401,15 @@ async function createClinic() {
   const token = document.getElementById('nc-token').value.trim();
   const adminToken = document.getElementById('nc-admin-token').value.trim();
   const adminsRaw = document.getElementById('nc-admins').value.trim();
-  if (!name || !token) { tg.showAlert('Nom va token kiritilishi shart'); return; }
+  if (!name || !token) { showCustomAlert('Nom va token kiritilishi shart'); return; }
   const adminIds = adminsRaw ? adminsRaw.split(',').map(Number).filter(Boolean) : [];
   try {
     await api('/clinics', { method: 'POST', body: JSON.stringify({ name, botToken: token, adminBotToken: adminToken || null, adminIds }) });
     closeModal();
-    tg.showAlert('✅ Klinika yaratildi');
+    showCustomAlert('✅ Klinika yaratildi');
     allClinics = await api('/clinics');
     renderClinics();
-  } catch(e) { tg.showAlert('❌ ' + e.message); }
+  } catch(e) { showCustomAlert('❌ ' + e.message); }
 }
 
 // ── PAYMENTS ───────────────────────────────────────────────────────
@@ -413,9 +445,9 @@ async function loadPayments() {
 async function confirmPayment(id) {
   try {
     await api(`/payments/${id}/confirm`, { method: 'POST' });
-    tg.showAlert('✅ To\'lov tasdiqlandi!');
+    showCustomAlert('✅ To\'lov tasdiqlandi!');
     loadPayments();
-  } catch(e) { tg.showAlert('❌ ' + e.message); }
+  } catch(e) { showCustomAlert('❌ ' + e.message); }
 }
 
 function openRejectModal(id) {
@@ -438,9 +470,9 @@ async function doReject() {
   try {
     await api(`/payments/${rejectPaymentId}/reject`, { method: 'POST', body: JSON.stringify({ reason }) });
     closeModal();
-    tg.showAlert('✅ Rad etildi');
+    showCustomAlert('✅ Rad etildi');
     loadPayments();
-  } catch(e) { tg.showAlert('❌ ' + e.message); }
+  } catch(e) { showCustomAlert('❌ ' + e.message); }
 }
 
 // ── PLANS ──────────────────────────────────────────────────────────
@@ -466,8 +498,8 @@ async function savePlan(id) {
   const durationDays = parseInt(document.getElementById(`plan-days-${id}`).value);
   try {
     await api(`/plans/${id}`, { method: 'PUT', body: JSON.stringify({ price, durationDays }) });
-    tg.showAlert('✅ Saqlandi');
-  } catch(e) { tg.showAlert('❌ ' + e.message); }
+    showCustomAlert('✅ Saqlandi');
+  } catch(e) { showCustomAlert('❌ ' + e.message); }
 }
 
 // ── PROMOS ─────────────────────────────────────────────────────────
@@ -544,28 +576,28 @@ function openEditPromoModal(p) {
 
 async function createPromo() {
   const data = promoFormData();
-  if (!data.title || !data.validFrom || !data.validTo) { tg.showAlert('Nomi va sanalar kiritilishi shart'); return; }
+  if (!data.title || !data.validFrom || !data.validTo) { showCustomAlert('Nomi va sanalar kiritilishi shart'); return; }
   try {
     await api('/promos', { method: 'POST', body: JSON.stringify(data) });
-    closeModal(); tg.showAlert('✅ Promo yaratildi'); loadPromos();
-  } catch(e) { tg.showAlert('❌ ' + e.message); }
+    closeModal(); showCustomAlert('✅ Promo yaratildi'); loadPromos();
+  } catch(e) { showCustomAlert('❌ ' + e.message); }
 }
 
 async function updatePromo(id) {
   const data = promoFormData();
   try {
     await api(`/promos/${id}`, { method: 'PUT', body: JSON.stringify(data) });
-    closeModal(); tg.showAlert('✅ Saqlandi'); loadPromos();
-  } catch(e) { tg.showAlert('❌ ' + e.message); }
+    closeModal(); showCustomAlert('✅ Saqlandi'); loadPromos();
+  } catch(e) { showCustomAlert('❌ ' + e.message); }
 }
 
 async function deletePromo(id) {
-  tg.showConfirm('Promoni o\'chirmoqchimisiz?', async confirmed => {
+  showCustomConfirm('Promoni o\'chirmoqchimisiz?', async confirmed => {
     if (!confirmed) return;
     try {
       await api(`/promos/${id}`, { method: 'DELETE' });
-      tg.showAlert('✅ O\'chirildi'); loadPromos();
-    } catch(e) { tg.showAlert('❌ ' + e.message); }
+      showCustomAlert('✅ O\'chirildi'); loadPromos();
+    } catch(e) { showCustomAlert('❌ ' + e.message); }
   });
 }
 
