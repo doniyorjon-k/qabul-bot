@@ -1,6 +1,6 @@
 import { Injectable, OnModuleInit } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, Not, IsNull } from 'typeorm';
 import { Clinic, ClinicStatus } from '../database/entities/clinic.entity';
 import { WorkSchedule } from '../database/entities/work-schedule.entity';
 import { ClinicSettings } from '../database/entities/clinic-settings.entity';
@@ -128,8 +128,16 @@ export class ClinicsService implements OnModuleInit {
     await this.repo.update(id, data);
   }
 
-  async delete(id: number): Promise<void> {
-    await this.repo.delete(id);
+  async softDelete(id: number): Promise<void> {
+    await this.repo.softDelete(id);
+  }
+
+  async restore(id: number): Promise<void> {
+    await this.repo.restore(id);
+  }
+
+  async findDeleted(): Promise<Clinic[]> {
+    return this.repo.find({ withDeleted: true, where: { deletedAt: Not(IsNull()) }, order: { deletedAt: 'DESC' } });
   }
 
   async updateAdminIds(id: number, adminIds: number[]): Promise<void> {

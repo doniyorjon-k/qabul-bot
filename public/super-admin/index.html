@@ -142,26 +142,52 @@ async function loadStats() {
 
 // ── CLINICS ────────────────────────────────────────────────────────
 let allClinics = [];
+let archivedClinics = [];
 let clinicFilter = 'all';
 
 async function loadClinics() {
   const el = document.getElementById('clinics-content');
   el.innerHTML = '<div class="spin"></div>';
   try {
-    allClinics = await api('/clinics');
+    [allClinics, archivedClinics] = await Promise.all([
+      api('/clinics'),
+      api('/clinics/archived').catch(() => []),
+    ]);
     renderClinics();
   } catch(e) { el.innerHTML = `<p style="color:var(--red);text-align:center;margin-top:48px">${e.message}</p>`; }
 }
 
 function renderClinics() {
   const el = document.getElementById('clinics-content');
-  const filters = ['all','trial','active','grace','expired','suspended'];
-  const labels = {all:'Barchasi',trial:'Sinov',active:'Faol',grace:'Grace',expired:'Tugagan',suspended:"To'xtatilgan"};
-  const filtered = clinicFilter === 'all' ? allClinics : allClinics.filter(c => c.status === clinicFilter);
+  const filters = ['all','trial','active','grace','expired','suspended','archived'];
+  const labels = {all:'Barchasi',trial:'Sinov',active:'Faol',grace:'Grace',expired:'Tugagan',suspended:"To'xtatilgan",archived:'🗄 Arxiv'};
   const chips = filters.map(f =>
-    `<span onclick="setFilter('${f}')" style="display:inline-block;padding:5px 10px;border-radius:20px;font-size:12px;cursor:pointer;margin:0 4px 6px 0;background:${f===clinicFilter?'var(--btn)':'var(--bg2)'};color:${f===clinicFilter?'var(--btn-txt)':'var(--hint)'}">${labels[f]}</span>`
+    `<span onclick="setFilter('${f}')" style="display:inline-block;padding:5px 10px;border-radius:20px;font-size:12px;cursor:pointer;margin:0 4px 6px 0;background:${f===clinicFilter?'var(--btn)':'var(--bg2)'};color:${f===clinicFilter?'var(--btn-txt)':'var(--hint)'}">${labels[f]}${f==='archived'&&archivedClinics.length?` (${archivedClinics.length})`:''}</span>`
   ).join('');
-  const cards = filtered.map(c => {
+
+  let cards;
+  if (clinicFilter === 'archived') {
+    cards = archivedClinics.map(c => {
+      const deletedStr = c.deletedAt ? new Date(c.deletedAt).toLocaleDateString('ru-RU') : '—';
+      return `<div class="card" style="opacity:.7">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start">
+          <div>
+            <div style="font-weight:600;font-size:14px">🗄 ${c.name}</div>
+            <div class="hint" style="font-size:12px;margin-top:2px">ID: ${c.id} · O'chirilgan: ${deletedStr}</div>
+          </div>
+          <span class="badge badge-suspended">Arxiv</span>
+        </div>
+        <button class="btn-primary btn-sm" style="margin-top:10px;width:100%" onclick="restoreClinic(${c.id},'${c.name.replace(/'/g,'&#39;')}')">♻️ Tiklash</button>
+      </div>`;
+    }).join('');
+    el.innerHTML = `
+      <div style="margin-bottom:10px;overflow-x:auto;white-space:nowrap">${chips}</div>
+      ${cards || '<p class="hint" style="text-align:center;margin-top:32px">Arxivlangan klinikalar yo\'q</p>'}`;
+    return;
+  }
+
+  const filtered = clinicFilter === 'all' ? allClinics : allClinics.filter(c => c.status === clinicFilter);
+  cards = filtered.map(c => {
     const endsAt = c.subscriptionEndsAt || c.trialEndsAt;
     const daysLeft = endsAt ? Math.ceil((new Date(endsAt) - new Date()) / 86400000) : null;
     const endsStr = endsAt ? new Date(endsAt).toLocaleDateString('ru-RU') : 'Cheksiz';
@@ -227,13 +253,26 @@ async function clinicAction(id, action) {
 
 async function deleteClinic(id) {
   const c = allClinics.find(x => x.id === id);
-  tg.showConfirm(`"${c?.name}" klinikasini o'chirasizmi? Bu amalni qaytarib bo'lmaydi!`, async (ok) => {
+  tg.showConfirm(`"${c?.name}" klinikasini arxivlaysizmi?\n\nBot to'xtatiladi. Keyin arxivdan tiklash mumkin.`, async (ok) => {
     if (!ok) return;
     try {
       await api(`/clinics/${id}`, { method: 'DELETE' });
       closeModal();
-      tg.showAlert('🗑 Klinika o\'chirildi');
-      allClinics = await api('/clinics');
+      tg.showAlert('🗄 Klinika arxivlandi');
+      [allClinics, archivedClinics] = await Promise.all([api('/clinics'), api('/clinics/archived').catch(()=>[])]);
+      renderClinics();
+    } catch(e) { tg.showAlert('❌ ' + e.message); }
+  });
+}
+
+async function restoreClinic(id, name) {
+  tg.showConfirm(`"${name}" klinikasini tiklamoqchimisiz?`, async (ok) => {
+    if (!ok) return;
+    try {
+      await api(`/clinics/${id}/restore`, { method: 'POST' });
+      tg.showAlert('✅ Klinika tiklandi');
+      [allClinics, archivedClinics] = await Promise.all([api('/clinics'), api('/clinics/archived').catch(()=>[])]);
+      clinicFilter = 'all';
       renderClinics();
     } catch(e) { tg.showAlert('❌ ' + e.message); }
   });

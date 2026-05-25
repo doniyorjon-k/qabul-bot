@@ -166,9 +166,44 @@ export class SuperAdminBotService implements OnModuleInit {
       if (!this.isSA(ctx.from.id)) return;
       const id = parseInt((ctx as any).match[1]);
       await this.clinicBotsService.stopBot(id);
-      await this.clinicsService.delete(id);
-      await ctx.editMessageText('🗑 Klinika o\'chirildi.', {
+      await this.clinicsService.softDelete(id);
+      await ctx.editMessageText('🗄 Klinika arxivlandi. Restore orqali qaytarish mumkin.', {
+        ...Markup.inlineKeyboard([
+          [Markup.button.callback('♻️ Tiklash', `sa:clinic:restore:${id}`)],
+          [Markup.button.callback('⬅️ Klinikalar', 'sa:clinics')],
+        ]),
+      });
+    });
+
+    bot.action(/^sa:clinic:restore:(\d+)$/, async (ctx) => {
+      await ctx.answerCbQuery();
+      if (!this.isSA(ctx.from.id)) return;
+      const id = parseInt((ctx as any).match[1]);
+      await this.clinicsService.restore(id);
+      const clinic = await this.clinicsService.findById(id);
+      if (clinic) await this.clinicBotsService.startBot(clinic);
+      await ctx.editMessageText('✅ Klinika tiklandi va bot ishga tushdi.', {
         ...Markup.inlineKeyboard([[Markup.button.callback('⬅️ Klinikalar', 'sa:clinics')]]),
+      });
+    });
+
+    bot.action('sa:clinics:archived', async (ctx) => {
+      await ctx.answerCbQuery();
+      if (!this.isSA(ctx.from.id)) return;
+      const deleted = await this.clinicsService.findDeleted();
+      if (!deleted.length) {
+        await ctx.editMessageText('🗄 Arxivlangan klinikalar yo\'q.', {
+          ...Markup.inlineKeyboard([[Markup.button.callback('⬅️ Klinikalar', 'sa:clinics')]]),
+        });
+        return;
+      }
+      const rows = deleted.map((c) => [
+        Markup.button.callback(`🗄 ${c.name}`, `sa:clinic:restore:${c.id}`),
+      ]);
+      rows.push([Markup.button.callback('⬅️ Klinikalar', 'sa:clinics')]);
+      await ctx.editMessageText(`🗄 *Arxivlangan klinikalar* (${deleted.length} ta)\nTiklash uchun bosing:`, {
+        parse_mode: 'Markdown',
+        ...Markup.inlineKeyboard(rows),
       });
     });
 
@@ -282,7 +317,10 @@ export class SuperAdminBotService implements OnModuleInit {
     const rows = clinics.map((c) => [
       Markup.button.callback(`${icon[c.status] || '?'} ${c.name}`, `sa:clinic:${c.id}`),
     ]);
-    rows.push([Markup.button.callback('⬅️ Orqaga', 'sa:back')]);
+    rows.push([
+      Markup.button.callback('🗄 Arxivlangan', 'sa:clinics:archived'),
+      Markup.button.callback('⬅️ Orqaga', 'sa:back'),
+    ]);
     const text = `🏥 *Klinikalar* (${clinics.length} ta)`;
     isEdit
       ? await ctx.editMessageText(text, { parse_mode: 'Markdown', ...Markup.inlineKeyboard(rows) })

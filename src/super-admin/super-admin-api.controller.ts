@@ -75,6 +75,12 @@ export class SuperAdminApiController {
     return this.clinicsService.findAll();
   }
 
+  @Get('clinics/archived')
+  async getArchivedClinics(@Headers('x-init-data') d: string) {
+    this.validate(d);
+    return this.clinicsService.findDeleted();
+  }
+
   @Get('clinics/:id')
   async getClinic(@Param('id', ParseIntPipe) id: number, @Headers('x-init-data') d: string) {
     this.validate(d);
@@ -117,7 +123,16 @@ export class SuperAdminApiController {
   async deleteClinic(@Param('id', ParseIntPipe) id: number, @Headers('x-init-data') d: string) {
     this.validate(d);
     await this.clinicBotsService.stopBot(id);
-    await this.clinicsService.delete(id);
+    await this.clinicsService.softDelete(id);
+    return { ok: true };
+  }
+
+  @Post('clinics/:id/restore')
+  async restoreClinic(@Param('id', ParseIntPipe) id: number, @Headers('x-init-data') d: string) {
+    this.validate(d);
+    await this.clinicsService.restore(id);
+    const clinic = await this.clinicsService.findById(id);
+    if (clinic) await this.clinicBotsService.startBot(clinic);
     return { ok: true };
   }
 
