@@ -5,6 +5,7 @@ import { AppointmentsService } from '../appointments/appointments.service';
 import { ClinicsService } from '../clinics/clinics.service';
 import { ClinicBotsService } from '../clinic-bots/clinic-bots.service';
 import { SuperAdminBotService } from '../super-admin/super-admin-bot.service';
+import { PromosService } from '../promos/promos.service';
 import { ClinicStatus } from '../database/entities/clinic.entity';
 import { fmtTime } from '../bot/keyboards/calendar.keyboard';
 
@@ -17,6 +18,7 @@ export class NotificationsService {
     private readonly appointmentsService: AppointmentsService,
     private readonly clinicsService: ClinicsService,
     private readonly superAdminBotService: SuperAdminBotService,
+    private readonly promosService: PromosService,
   ) {}
 
   @Cron('*/10 * * * *')
@@ -147,6 +149,34 @@ export class NotificationsService {
           );
         }
       }
+    }
+  }
+
+  // ── Promo notifications (every hour) ────────────────────────────
+  @Cron('0 * * * *')
+  async sendPromoNotifications() {
+    const promos = await this.promosService.findUnnotified();
+    if (!promos.length) return;
+
+    const clinics = await this.clinicsService.findActive();
+    for (const promo of promos) {
+      const discountLine = promo.discountPercent
+        ? `🎁 Chegirma: *${promo.discountPercent}%*`
+        : `🎁 Chegirma: *${promo.discountAmount?.toLocaleString()} so'm*`;
+      const [fy, fm, fd] = promo.validFrom.split('-');
+      const [ty, tm, td] = promo.validTo.split('-');
+      const text =
+        `🎉 *Yangi promo!*\n\n` +
+        `📌 ${promo.title}\n` +
+        `${discountLine}\n` +
+        `📅 Amal qilish muddati: ${fd}.${fm}.${fy} — ${td}.${tm}.${ty}\n\n` +
+        `Obuna to'lashda chegirma avtomatik qo'llaniladi! /paid`;
+
+      for (const clinic of clinics) {
+        await this.notifyClinicAdmins(clinic, text);
+      }
+      await this.promosService.markNotified(promo.id);
+      this.logger.log(`Promo #${promo.id} "${promo.title}" haqida xabar yuborildi`);
     }
   }
 
