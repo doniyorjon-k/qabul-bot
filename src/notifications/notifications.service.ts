@@ -6,6 +6,7 @@ import { ClinicsService } from '../clinics/clinics.service';
 import { ClinicBotsService } from '../clinic-bots/clinic-bots.service';
 import { SuperAdminBotService } from '../super-admin/super-admin-bot.service';
 import { PromosService } from '../promos/promos.service';
+import { PlansService } from '../plans/plans.service';
 import { ClinicStatus } from '../database/entities/clinic.entity';
 import { fmtTime } from '../bot/keyboards/calendar.keyboard';
 
@@ -19,6 +20,7 @@ export class NotificationsService {
     private readonly clinicsService: ClinicsService,
     private readonly superAdminBotService: SuperAdminBotService,
     private readonly promosService: PromosService,
+    private readonly plansService: PlansService,
   ) {}
 
   @Cron('*/10 * * * *')
@@ -95,7 +97,24 @@ export class NotificationsService {
   async processSubscriptionExpiry() {
     const clinics = await this.clinicsService.findAll();
     const now = new Date();
-    const payBtn = { reply_markup: { inline_keyboard: [[{ text: '💳 To\'lash', callback_data: 'pay:start' }]] } };
+    const plans = await this.plansService.findAll();
+    const murojaatRow = [{ text: '📞 Adminga murojaat', url: 'https://t.me/doniyorjon_k' }];
+    const payBtn = {
+      reply_markup: {
+        inline_keyboard: [
+          [{ text: '💳 To\'lash', callback_data: 'pay:start' }],
+          [murojaatRow[0]],
+        ],
+      },
+    };
+    const expiredKb = {
+      reply_markup: {
+        inline_keyboard: [
+          ...plans.map(p => [{ text: `${p.name} — ${p.price.toLocaleString()} so'm (${p.durationDays} kun)`, callback_data: `pay:plan:${p.id}` }]),
+          [murojaatRow[0]],
+        ],
+      },
+    };
 
     for (const clinic of clinics) {
       if (clinic.status === ClinicStatus.SUSPENDED) continue;
@@ -134,8 +153,8 @@ export class NotificationsService {
         if (daysLeft <= 0) {
           await this.clinicBotsService.sendToAdminsPreferAdminBot(
             clinic,
-            `🔴 *Botingiz to'xtatilmoqda!*\n\nObuna muddati tugadi.\n\nBotingizni qayta faollashtirish uchun to'lov qiling:`,
-            { parse_mode: 'Markdown', ...payBtn },
+            `🔴 *Botingiz to'xtatildi!*\n\nObuna muddati tugadi. Botingizni qayta faollashtirish uchun quyidagi tariflardan birini tanlang:`,
+            { parse_mode: 'Markdown', ...expiredKb },
           );
           await this.clinicsService.update(clinic.id, { status: ClinicStatus.EXPIRED });
           await this.clinicBotsService.stopBot(clinic.id);
