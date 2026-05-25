@@ -531,7 +531,7 @@ export function setupBotHandlers(
   });
 
   // ── /paid command ─────────────────────────────────────────────────
-  bot.command('paid', async (ctx) => {
+  const handlePaid = async (ctx: any) => {
     if (!isAdmin(ctx.from.id)) return;
     const currentClinic = await services.clinicsService.findById(clinicId);
     if (!currentClinic) return;
@@ -557,7 +557,9 @@ export function setupBotHandlers(
       `💳 *Obuna to\'lovi*\n\n${subInfo}\n\n💳 Karta raqami: \`${cardNum}\`\n👤 Egasi: *${cardOwner}*\n\nQaysi rejani tanlaysiz?`,
       { parse_mode: 'Markdown', ...Markup.inlineKeyboard(planBtns) },
     );
-  });
+  };
+  bot.command('paid', handlePaid);
+  bot.action('pay:start', async (ctx) => { await ctx.answerCbQuery(); await handlePaid(ctx); });
 
   bot.action(/^pay:plan:(\d+)$/, async (ctx) => {
     await ctx.answerCbQuery();

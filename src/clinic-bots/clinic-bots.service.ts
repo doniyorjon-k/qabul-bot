@@ -130,6 +130,14 @@ export class ClinicBotsService implements OnModuleInit {
     await bot.telegram.sendMessage(chatId, text, extra);
   }
 
+  async sendToAdminsPreferAdminBot(clinic: { id: number; adminIds: number[] }, text: string, extra?: any): Promise<void> {
+    const bot = this.adminBots.get(clinic.id) || this.bots.get(clinic.id);
+    if (!bot) return;
+    for (const adminId of clinic.adminIds) {
+      try { await bot.telegram.sendMessage(adminId, text, extra); } catch {}
+    }
+  }
+
   keepAlive() {
     const appUrl = this.configService.get<string>('app.url');
     if (!appUrl) return;

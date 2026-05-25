@@ -95,6 +95,7 @@ export class NotificationsService {
   async processSubscriptionExpiry() {
     const clinics = await this.clinicsService.findAll();
     const now = new Date();
+    const payBtn = { reply_markup: { inline_keyboard: [[{ text: '💳 To\'lash', callback_data: 'pay:start' }]] } };
 
     for (const clinic of clinics) {
       if (clinic.status === ClinicStatus.SUSPENDED) continue;
@@ -109,21 +110,24 @@ export class NotificationsService {
         if (daysLeft <= 7 && daysLeft > 3 && !clinic.notified7Days) {
           await this.notifyClinicAdmins(
             clinic,
-            `⚠️ *Obuna eslatmasi*\n\nKlinikangiz obunasi *${daysLeft} kunda* tugaydi.\n\nUzaytirish uchun /paid buyrug'ini yuboring.`,
+            `⚠️ *Obuna eslatmasi*\n\nKlinikangiz obunasi *${daysLeft} kunda* tugaydi.\n\nObunani uzaytiring:`,
+            payBtn,
           );
           await this.clinicsService.update(clinic.id, { notified7Days: true });
         }
         if (daysLeft <= 3 && daysLeft > 1 && !clinic.notified3Days) {
           await this.notifyClinicAdmins(
             clinic,
-            `🔴 *Obuna tugayapti!*\n\nKlinikangiz obunasi *${daysLeft} kunda* tugaydi.\n\nHoziroq uzaytiring: /paid`,
+            `🔴 *Obuna tugayapti!*\n\nKlinikangiz obunasi *${daysLeft} kunda* tugaydi.\n\nHoziroq uzaytiring:`,
+            payBtn,
           );
           await this.clinicsService.update(clinic.id, { notified3Days: true });
         }
         if (daysLeft <= 1 && daysLeft > 0 && !clinic.notified1Day) {
           await this.notifyClinicAdmins(
             clinic,
-            `🚨 *Ertaga obuna tugaydi!*\n\nKlinikangiz ertaga to'xtatiladi.\n\nZudlik bilan to'lang: /paid`,
+            `🚨 *Ertaga obuna tugaydi!*\n\nKlinikangiz ertaga to'xtatiladi.\n\nZudlik bilan to'lang:`,
+            payBtn,
           );
           await this.clinicsService.update(clinic.id, { notified1Day: true });
         }
@@ -131,7 +135,8 @@ export class NotificationsService {
           await this.clinicsService.update(clinic.id, { status: ClinicStatus.GRACE });
           await this.notifyClinicAdmins(
             clinic,
-            `❌ *Obuna muddati tugadi!*\n\nKlinikangiz grace davrida — 3 kun ichida to'lamasangiz bot to'xtatiladi.\n\nTo'lash: /paid`,
+            `❌ *Obuna muddati tugadi!*\n\nKlinikangiz grace davrida — *3 kun* ichida to'lamasangiz bot to'xtatiladi.\n\nHoziroq to'lang:`,
+            payBtn,
           );
           this.logger.log(`Clinic ${clinic.id} moved to GRACE`);
         }
@@ -140,6 +145,11 @@ export class NotificationsService {
       if (clinic.status === ClinicStatus.GRACE) {
         const graceDays = Math.ceil((now.getTime() - endsAt.getTime()) / 86400000);
         if (graceDays >= 3) {
+          await this.clinicBotsService.sendToAdminsPreferAdminBot(
+            clinic,
+            `🔴 *Botingiz to'xtatilmoqda!*\n\nObuna muddati tugadi va grace davri o'tdi.\n\nBotingizni qayta faollashtirish uchun to'lov qiling:`,
+            { parse_mode: 'Markdown', ...payBtn },
+          );
           await this.clinicsService.update(clinic.id, { status: ClinicStatus.EXPIRED });
           await this.clinicBotsService.stopBot(clinic.id);
           this.logger.log(`Clinic ${clinic.id} EXPIRED and bot stopped`);
@@ -180,10 +190,10 @@ export class NotificationsService {
     }
   }
 
-  private async notifyClinicAdmins(clinic: { id: number; adminIds: number[] }, text: string) {
+  private async notifyClinicAdmins(clinic: { id: number; adminIds: number[] }, text: string, extra?: Record<string, any>) {
     for (const adminId of clinic.adminIds) {
       try {
-        await this.clinicBotsService.sendMessage(clinic.id, adminId, text, { parse_mode: 'Markdown' });
+        await this.clinicBotsService.sendMessage(clinic.id, adminId, text, { parse_mode: 'Markdown', ...extra });
       } catch {}
     }
   }
