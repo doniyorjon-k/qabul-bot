@@ -1640,7 +1640,7 @@ function buildSubscriptionInfo(clinic: Clinic | null): string {
   const endsAt = clinic.subscriptionEndsAt ?? clinic.trialEndsAt;
   const daysLeft = endsAt ? Math.ceil((endsAt.getTime() - Date.now()) / (1000 * 60 * 60 * 24)) : null;
   const statusLabels: Record<string, string> = {
-    trial: '🆓 Sinov davri', active: '✅ Faol', grace: '⚠️ Grace davri', expired: '❌ Tugagan', suspended: '⛔ To\'xtatilgan',
+    trial: '🆓 Sinov davri', active: '✅ Faol', expired: '❌ Tugagan', suspended: '⛔ To\'xtatilgan',
   };
   let text = `📊 Holat: *${statusLabels[clinic.status] || clinic.status}*`;
   if (daysLeft !== null) {

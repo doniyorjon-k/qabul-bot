@@ -3,7 +3,6 @@ import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, DeleteDateCol
 export enum ClinicStatus {
   TRIAL = 'trial',
   ACTIVE = 'active',
-  GRACE = 'grace',
   EXPIRED = 'expired',
   SUSPENDED = 'suspended',
 }

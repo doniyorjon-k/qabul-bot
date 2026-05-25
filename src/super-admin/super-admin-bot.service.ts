@@ -310,7 +310,6 @@ export class SuperAdminBotService implements OnModuleInit {
       `• Jami: *${stats.total}*\n` +
       `• Sinov: *${stats.trial || 0}*\n` +
       `• Faol: *${stats.active || 0}*\n` +
-      `• Grace: *${stats.grace || 0}*\n` +
       `• Tugagan: *${stats.expired || 0}*\n` +
       `• To\'xtatilgan: *${stats.suspended || 0}*\n\n` +
       `💳 Kutayotgan to\'lovlar: *${pending.length}*`;
@@ -323,7 +322,7 @@ export class SuperAdminBotService implements OnModuleInit {
   private async replyClinicsList(ctx: any, isEdit: boolean) {
     const clinics = await this.clinicsService.findAll();
     const icon: Record<string, string> = {
-      trial: '🆓', active: '✅', grace: '⚠️', expired: '❌', suspended: '⛔',
+      trial: '🆓', active: '✅', expired: '❌', suspended: '⛔',
     };
     const rows = clinics.map((c) => [
       Markup.button.callback(`${icon[c.status] || '?'} ${c.name}`, `sa:clinic:${c.id}`),
@@ -345,7 +344,7 @@ export class SuperAdminBotService implements OnModuleInit {
     const endsStr = endsAt ? endsAt.toLocaleDateString('ru-RU') : 'Cheksiz';
     const daysLeft = endsAt ? Math.ceil((endsAt.getTime() - Date.now()) / 86400000) : null;
     const labels: Record<string, string> = {
-      trial: 'Sinov', active: 'Faol', grace: 'Grace', expired: 'Tugagan', suspended: "To'xtatilgan",
+      trial: 'Sinov', active: 'Faol', expired: 'Tugagan', suspended: "To'xtatilgan",
     };
     const text =
       `🏥 *${clinic.name}*\n\n` +

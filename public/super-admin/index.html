@@ -133,8 +133,8 @@ function api(path, opts={}) {
   });
 }
 
-const SCLR = { trial:'#bf5af2', active:'#30d158', grace:'#ff9f0a', expired:'#ff453a', suspended:'#636366' };
-const SLBL = { trial:'Sinov', active:'Faol', grace:'Grace', expired:'Tugagan', suspended:"To'xtatilgan" };
+const SCLR = { trial:'#bf5af2', active:'#30d158', expired:'#ff453a', suspended:'#636366' };
+const SLBL = { trial:'Sinov', active:'Faol', expired:'Tugagan', suspended:"To'xtatilgan" };
 function sBadge(s) {
   const c=SCLR[s]||'#636366';
   return `<span class="pill" style="background:${c}1a;color:${c}">${SLBL[s]||s}</span>`;
@@ -164,8 +164,8 @@ async function loadStats() {
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
         <div class="card" style="margin:0;text-align:center"><div style="font-size:24px;font-weight:700;color:#bf5af2">${s.trial||0}</div><div style="font-size:11px;color:var(--hint);margin-top:3px">Sinov</div></div>
         <div class="card" style="margin:0;text-align:center"><div style="font-size:24px;font-weight:700;color:#30d158">${s.active||0}</div><div style="font-size:11px;color:var(--hint);margin-top:3px">Faol</div></div>
-        <div class="card" style="margin:0;text-align:center"><div style="font-size:24px;font-weight:700;color:#ff9f0a">${s.grace||0}</div><div style="font-size:11px;color:var(--hint);margin-top:3px">Grace</div></div>
         <div class="card" style="margin:0;text-align:center"><div style="font-size:24px;font-weight:700;color:#ff453a">${s.expired||0}</div><div style="font-size:11px;color:var(--hint);margin-top:3px">Tugagan</div></div>
+        <div class="card" style="margin:0;text-align:center"><div style="font-size:24px;font-weight:700;color:#636366">${s.suspended||0}</div><div style="font-size:11px;color:var(--hint);margin-top:3px">To'xtatilgan</div></div>
       </div>
     </div>
     <div style="background:${pending>0?'rgba(255,159,10,.12)':'var(--bg2)'};border:1px solid ${pending>0?'rgba(255,159,10,.3)':'var(--border)'};border-radius:16px;padding:16px;display:flex;align-items:center;justify-content:space-between">
@@ -192,8 +192,8 @@ async function loadClinics() {
 
 function renderClinics() {
   const el=document.getElementById('clinics-content');
-  const filters=['all','trial','active','grace','expired','suspended','archived'];
-  const flabels={all:'Barchasi',trial:'Sinov',active:'Faol',grace:'Grace',expired:'Tugagan',suspended:"To'xtatilgan",archived:'Arxiv'};
+  const filters=['all','trial','active','expired','suspended','archived'];
+  const flabels={all:'Barchasi',trial:'Sinov',active:'Faol',expired:'Tugagan',suspended:"To'xtatilgan",archived:'Arxiv'};
   const chips=filters.map(f=>{
     const cnt=f==='archived'?archivedClinics.length:(f==='all'?allClinics.length:allClinics.filter(c=>c.status===f).length);
     const on=f===clinicFilter;

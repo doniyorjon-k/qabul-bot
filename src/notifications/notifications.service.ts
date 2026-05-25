@@ -132,22 +132,9 @@ export class NotificationsService {
           await this.clinicsService.update(clinic.id, { notified1Day: true });
         }
         if (daysLeft <= 0) {
-          await this.clinicsService.update(clinic.id, { status: ClinicStatus.GRACE });
-          await this.notifyClinicAdmins(
-            clinic,
-            `❌ *Obuna muddati tugadi!*\n\nKlinikangiz grace davrida — *3 kun* ichida to'lamasangiz bot to'xtatiladi.\n\nHoziroq to'lang:`,
-            payBtn,
-          );
-          this.logger.log(`Clinic ${clinic.id} moved to GRACE`);
-        }
-      }
-
-      if (clinic.status === ClinicStatus.GRACE) {
-        const graceDays = Math.ceil((now.getTime() - endsAt.getTime()) / 86400000);
-        if (graceDays >= 3) {
           await this.clinicBotsService.sendToAdminsPreferAdminBot(
             clinic,
-            `🔴 *Botingiz to'xtatilmoqda!*\n\nObuna muddati tugadi va grace davri o'tdi.\n\nBotingizni qayta faollashtirish uchun to'lov qiling:`,
+            `🔴 *Botingiz to'xtatilmoqda!*\n\nObuna muddati tugadi.\n\nBotingizni qayta faollashtirish uchun to'lov qiling:`,
             { parse_mode: 'Markdown', ...payBtn },
           );
           await this.clinicsService.update(clinic.id, { status: ClinicStatus.EXPIRED });

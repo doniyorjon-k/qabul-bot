@@ -8,7 +8,6 @@ import { Service } from '../database/entities/service.entity';
 import { Faq } from '../database/entities/faq.entity';
 
 const TRIAL_DAYS = 14;
-const GRACE_DAYS = 3;
 
 @Injectable()
 export class ClinicsService implements OnModuleInit {
@@ -119,7 +118,6 @@ export class ClinicsService implements OnModuleInit {
       where: [
         { status: ClinicStatus.TRIAL },
         { status: ClinicStatus.ACTIVE },
-        { status: ClinicStatus.GRACE },
       ],
     });
   }
@@ -201,7 +199,6 @@ export class ClinicsService implements OnModuleInit {
       where: [
         { status: ClinicStatus.TRIAL },
         { status: ClinicStatus.ACTIVE },
-        { status: ClinicStatus.GRACE },
       ],
     });
     const now = new Date();
@@ -225,7 +222,6 @@ export class ClinicsService implements OnModuleInit {
     if (clinic.status === ClinicStatus.SUSPENDED || clinic.status === ClinicStatus.EXPIRED) return false;
     if (!clinic.trialEndsAt && !clinic.subscriptionEndsAt) return true; // unlimited
     const endsAt = clinic.subscriptionEndsAt ?? clinic.trialEndsAt;
-    const graceEnd = new Date(endsAt.getTime() + GRACE_DAYS * 24 * 60 * 60 * 1000);
-    return graceEnd > new Date();
+    return endsAt > new Date();
   }
 }
