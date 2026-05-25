@@ -5,136 +5,112 @@
   <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1"/>
   <title>Admin Panel</title>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
-  <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   <style>
-    :root {
-      --bg:  var(--tg-theme-bg-color,#1c1c1e);
-      --bg2: var(--tg-theme-secondary-bg-color,#2c2c2e);
-      --txt: var(--tg-theme-text-color,#fff);
-      --hint:var(--tg-theme-hint-color,#8e8e93);
-      --btn: var(--tg-theme-button-color,#007aff);
-      --btn-txt:var(--tg-theme-button-text-color,#fff);
-      --red: var(--tg-theme-destructive-text-color,#ff3b30);
-    }
-    *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-    body{background:var(--bg);color:var(--txt);font-family:-apple-system,sans-serif;margin:0;padding-bottom:72px}
-    .card{background:var(--bg2);border-radius:14px;padding:14px;margin-bottom:10px}
-    .hint{color:var(--hint)}
+    :root{--bg:var(--tg-theme-bg-color,#111113);--bg2:var(--tg-theme-secondary-bg-color,#1c1c1e);--bg3:rgba(255,255,255,.05);--txt:var(--tg-theme-text-color,#f2f2f7);--hint:var(--tg-theme-hint-color,#636366);--btn:var(--tg-theme-button-color,#0a84ff);--btn-txt:var(--tg-theme-button-text-color,#fff);--red:var(--tg-theme-destructive-text-color,#ff453a);--green:#30d158;--orange:#ff9f0a;--border:rgba(255,255,255,.07)}
+    *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;margin:0;padding:0}
+    body{background:var(--bg);color:var(--txt);font-family:-apple-system,BlinkMacSystemFont,sans-serif;padding-bottom:72px}
     .section{display:none}.section.active{display:block}
-    .spin{border:2px solid var(--bg2);border-top-color:var(--btn);border-radius:50%;width:28px;height:28px;animation:sp .7s linear infinite;margin:48px auto}
+    .pg{padding:0 14px}
+    .spin{width:24px;height:24px;border:2.5px solid rgba(255,255,255,.08);border-top-color:var(--btn);border-radius:50%;animation:sp .7s linear infinite;margin:60px auto}
     @keyframes sp{to{transform:rotate(360deg)}}
-    .tab-bar{position:fixed;bottom:0;left:0;right:0;display:flex;background:var(--bg2);border-top:1px solid rgba(142,142,147,.25);z-index:20}
-    .tab{flex:1;display:flex;flex-direction:column;align-items:center;padding:8px 0 6px;gap:2px;border:none;background:none;color:var(--hint);font-size:10px;cursor:pointer}
+    .hdr{position:sticky;top:0;z-index:10;background:var(--bg);border-bottom:1px solid var(--border);padding:12px 16px;display:flex;align-items:center;justify-content:space-between}
+    .hdr-title{font-size:17px;font-weight:700;letter-spacing:-.3px}
+    .hdr-btn{width:34px;height:34px;border-radius:50%;background:var(--bg2);border:1px solid var(--border);color:var(--btn);font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1}
+    .tab-bar{position:fixed;bottom:0;left:0;right:0;background:var(--bg2);border-top:1px solid var(--border);display:flex;z-index:20}
+    .tab{flex:1;display:flex;flex-direction:column;align-items:center;padding:8px 2px 10px;gap:3px;border:none;background:none;color:var(--hint);font-size:10px;font-weight:500;cursor:pointer}
     .tab.on{color:var(--btn)}
-    .tab svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.7}
-    .btn-red{background:var(--red);color:#fff;border:none;border-radius:10px;padding:8px 14px;font-size:13px;font-weight:600;cursor:pointer}
-    .btn-gray{background:var(--bg);color:var(--hint);border:none;border-radius:10px;padding:8px 14px;font-size:13px;cursor:pointer}
-    .modal{position:fixed;inset:0;background:rgba(0,0,0,.55);display:flex;align-items:flex-end;z-index:50}
-    .modal.hidden{display:none}
-    .modal-box{background:var(--bg2);border-radius:18px 18px 0 0;width:100%;padding:20px}
-    .stars{color:#f59e0b;font-size:16px;letter-spacing:1px}
-    .bar-wrap{height:8px;background:var(--bg);border-radius:4px;overflow:hidden;flex:1}
-    .bar-fill{height:100%;border-radius:4px;background:var(--btn);transition:width .4s}
-    input[type=search]{background:var(--bg2);color:var(--txt);border:none;border-radius:12px;padding:10px 14px;width:100%;font-size:15px;outline:none}
-    input[type=search]::placeholder{color:var(--hint)}
-    .badge{font-size:10px;font-weight:700;color:#fff;padding:1px 6px;border-radius:99px}
-    .badge-confirmed{background:#34c759}
-    .badge-cancelled{background:var(--red)}
-    .badge-completed{background:#636366}
-    .badge-pending{background:#ff9500}
-    .chip{display:inline-flex;align-items:center;justify-content:center;background:var(--bg2);color:var(--hint);border:1.5px solid transparent;border-radius:10px;padding:6px 12px;font-size:13px;font-weight:500;cursor:pointer;user-select:none;transition:all .15s}
-    .chip.on{background:rgba(0,122,255,.15);border-color:var(--btn);color:var(--btn)}
-    .chip-sm{padding:5px 8px;font-size:12px;border-radius:8px}
-    .form-input{background:var(--bg2);color:var(--txt);border:none;border-radius:12px;padding:11px 14px;width:100%;font-size:14px;outline:none;margin-bottom:8px}
-    .form-input::placeholder{color:var(--hint)}
-    .form-label{font-size:12px;color:var(--hint);margin-bottom:4px;display:block}
-    .section-title{font-size:13px;font-weight:700;color:var(--hint);text-transform:uppercase;letter-spacing:.5px;margin:16px 0 8px}
-    .btn-primary{background:var(--btn);color:var(--btn-txt);border:none;border-radius:10px;padding:10px 20px;font-size:14px;font-weight:600;cursor:pointer;width:100%}
+    .tab svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+    .tab.on svg{stroke-width:2.2}
+    .card{background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:16px;margin-bottom:10px}
+    .apt{background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:14px;margin-bottom:8px}
+    .apt-av{width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;flex-shrink:0}
+    .pill{font-size:10px;font-weight:700;padding:3px 9px;border-radius:6px;display:inline-block;white-space:nowrap}
+    .sec-t{font-size:11px;font-weight:700;color:var(--hint);text-transform:uppercase;letter-spacing:.7px;margin:18px 0 8px}
+    .f-lbl{font-size:12px;font-weight:500;color:var(--hint);margin-bottom:5px;display:block}
+    .f-inp{background:var(--bg3);color:var(--txt);border:1px solid var(--border);border-radius:12px;padding:11px 14px;width:100%;font-size:14px;outline:none;margin-bottom:10px;-webkit-appearance:none}
+    .f-inp:focus{border-color:rgba(10,132,255,.5)}
+    .f-inp::placeholder{color:var(--hint)}
+    .chip{display:inline-flex;align-items:center;justify-content:center;padding:7px 12px;border-radius:10px;font-size:13px;font-weight:500;cursor:pointer;border:1.5px solid transparent;background:var(--bg3);color:var(--hint);user-select:none;transition:all .15s}
+    .chip.on{background:rgba(10,132,255,.15);border-color:rgba(10,132,255,.35);color:var(--btn)}
+    .chip-sm{padding:5px 9px;font-size:12px;border-radius:8px}
+    .btn-p{background:var(--btn);color:var(--btn-txt);border:none;border-radius:12px;padding:12px;font-size:14px;font-weight:600;cursor:pointer;width:100%}
+    .btn-g{background:var(--bg3);color:var(--txt);border:1px solid var(--border);border-radius:12px;padding:12px;font-size:14px;cursor:pointer;width:100%}
+    .btn-r{background:rgba(255,69,58,.12);color:var(--red);border:none;border-radius:12px;padding:12px;font-size:14px;font-weight:600;cursor:pointer;width:100%}
+    .btn-sm{padding:8px 14px;font-size:13px;border-radius:10px;width:auto}
+    .sheet{position:fixed;inset:0;background:rgba(0,0,0,.55);display:flex;align-items:flex-end;z-index:50}
+    .sheet.hidden{display:none}
+    .sheet-box{background:var(--bg2);border-radius:22px 22px 0 0;width:100%;padding:8px 20px 32px}
+    .hdl{width:36px;height:4px;background:rgba(255,255,255,.18);border-radius:2px;margin:0 auto 16px}
+    .srch-wrap{position:relative;padding-top:8px;margin-bottom:14px}
+    .srch{width:100%;background:var(--bg2);color:var(--txt);border:1px solid var(--border);border-radius:14px;padding:11px 14px 11px 40px;font-size:15px;outline:none;-webkit-appearance:none}
+    .srch::placeholder{color:var(--hint)}
+    .stars{color:#ff9f0a;font-size:15px;letter-spacing:1px}
   </style>
 </head>
 <body>
 
-<div style="position:sticky;top:0;z-index:10;background:var(--bg);padding:12px 16px 8px;display:flex;align-items:center;justify-content:space-between">
-  <span style="font-size:17px;font-weight:600">👨‍⚕️ Admin panel</span>
-  <button onclick="refreshTab()" style="background:none;border:none;color:var(--btn);font-size:13px;cursor:pointer">↻ Yangilash</button>
+<div class="hdr">
+  <div class="hdr-title">👨‍⚕️ Admin panel</div>
+  <button class="hdr-btn" onclick="refreshTab()">↻</button>
 </div>
 
-<div style="padding:0 14px">
-
-  <!-- BUGUN -->
-  <div id="sec-today" class="section active">
-    <div id="today-content"><div class="spin"></div></div>
-  </div>
-
-  <!-- HAFTA -->
-  <div id="sec-week" class="section">
-    <div id="week-content"><div class="spin"></div></div>
-  </div>
-
-  <!-- STATISTIKA -->
-  <div id="sec-stats" class="section">
-    <div id="stats-content"><div class="spin"></div></div>
-  </div>
-
-  <!-- FIKRLAR -->
-  <div id="sec-reviews" class="section">
-    <div id="reviews-content"><div class="spin"></div></div>
-  </div>
-
-  <!-- SOZLAMALAR -->
-  <div id="sec-settings" class="section">
-    <div id="settings-content"><div class="spin"></div></div>
-  </div>
-
-  <!-- QIDIRISH -->
+<div class="pg">
+  <div id="sec-today" class="section active"><div id="today-content"><div class="spin"></div></div></div>
+  <div id="sec-week" class="section"><div id="week-content"><div class="spin"></div></div></div>
+  <div id="sec-stats" class="section"><div id="stats-content"><div class="spin"></div></div></div>
+  <div id="sec-reviews" class="section"><div id="reviews-content"><div class="spin"></div></div></div>
   <div id="sec-search" class="section">
-    <div style="padding:8px 0 12px">
-      <input type="search" id="search-input" placeholder="Ism yoki telefon raqam..." oninput="onSearch(this.value)"/>
+    <div class="srch-wrap">
+      <svg style="position:absolute;left:13px;top:50%;transform:translateY(-50%);width:16px;height:16px;color:var(--hint);fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+      <input class="srch" type="search" id="search-input" placeholder="Ism yoki telefon raqam..." oninput="onSearch(this.value)"/>
     </div>
-    <div id="search-content"><div id="search-hint" class="hint text-center" style="margin-top:32px;font-size:14px">Qidirish uchun yozing...</div></div>
+    <div id="search-content"><div id="search-hint" style="color:var(--hint);text-align:center;margin-top:32px;font-size:14px">Qidirish uchun yozing...</div></div>
   </div>
-
+  <div id="sec-settings" class="section"><div id="settings-content"><div class="spin"></div></div></div>
 </div>
 
-<!-- Cancel Modal -->
-<div id="cancel-modal" class="modal hidden">
-  <div class="modal-box">
-    <p style="font-weight:600;margin:0 0 12px">Bekor qilish sababi</p>
-    <textarea id="cancel-reason" rows="3" placeholder="Sabab (ixtiyoriy)..."
-      style="width:100%;background:var(--bg);color:var(--txt);border:1px solid var(--hint);border-radius:10px;padding:10px;font-size:14px;resize:none;outline:none"></textarea>
-    <div style="display:flex;gap:10px;margin-top:12px">
-      <button class="btn-gray" onclick="closeModal()" style="flex:1">Bekor</button>
-      <button class="btn-red" onclick="confirmCancel()" style="flex:1">Qabulni bekor qil</button>
+<!-- Cancel Sheet -->
+<div id="cancel-modal" class="sheet hidden">
+  <div class="sheet-box">
+    <div class="hdl"></div>
+    <div style="font-weight:700;font-size:16px;margin-bottom:4px">Qabulni bekor qilish</div>
+    <div style="font-size:13px;color:var(--hint);margin-bottom:14px">Sabab (ixtiyoriy)</div>
+    <textarea id="cancel-reason" rows="3" placeholder="Sabab..." style="width:100%;background:var(--bg3);color:var(--txt);border:1px solid var(--border);border-radius:12px;padding:12px;font-size:14px;resize:none;outline:none;margin-bottom:14px"></textarea>
+    <div style="display:flex;gap:10px">
+      <button class="btn-g btn-sm" style="flex:1;padding:12px" onclick="closeModal()">Bekor</button>
+      <button class="btn-r btn-sm" style="flex:1;padding:12px" onclick="confirmCancel()">❌ Bekor qilish</button>
     </div>
+  </div>
+</div>
+
+<!-- Custom Alert -->
+<div id="cal-alert" style="display:none;position:fixed;inset:0;z-index:100;background:rgba(0,0,0,.65);align-items:center;justify-content:center;padding:24px">
+  <div style="background:var(--bg2);border-radius:18px;padding:24px;max-width:320px;width:100%;border:1px solid var(--border)">
+    <p id="cal-alert-msg" style="margin:0 0 20px;font-size:15px;line-height:1.5;white-space:pre-wrap"></p>
+    <div id="cal-alert-btns"></div>
   </div>
 </div>
 
 <!-- Tab Bar -->
 <nav class="tab-bar">
   <button class="tab on" id="tab-today" onclick="switchTab('today')">
-    <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
-    Bugun
+    <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>Bugun
   </button>
   <button class="tab" id="tab-week" onclick="switchTab('week')">
-    <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18M8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01"/></svg>
-    Hafta
+    <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18M8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01"/></svg>Hafta
   </button>
   <button class="tab" id="tab-stats" onclick="switchTab('stats')">
-    <svg viewBox="0 0 24 24"><path d="M18 20V10M12 20V4M6 20v-6"/></svg>
-    Statistika
+    <svg viewBox="0 0 24 24"><path d="M18 20V10M12 20V4M6 20v-6"/></svg>Statistika
   </button>
   <button class="tab" id="tab-reviews" onclick="switchTab('reviews')">
-    <svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-    Fikrlar
+    <svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>Fikrlar
   </button>
   <button class="tab" id="tab-search" onclick="switchTab('search')">
-    <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-    Qidirish
+    <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>Qidirish
   </button>
   <button class="tab" id="tab-settings" onclick="switchTab('settings')">
-    <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-    Sozlamalar
+    <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>Sozlamalar
   </button>
 </nav>
 
@@ -144,7 +120,29 @@ tg.ready(); tg.expand();
 const initData = tg.initData;
 const clinicId = new URLSearchParams(window.location.search).get('clinicId') || '';
 
-// ── API ────────────────────────────────────────────────────────────
+let _cb = null;
+function showCustomAlert(msg, cb) {
+  _cb = cb || null;
+  document.getElementById('cal-alert-msg').textContent = msg;
+  document.getElementById('cal-alert-btns').innerHTML =
+    `<button class="btn-p" onclick="closeAlert(true)">Yopish</button>`;
+  document.getElementById('cal-alert').style.display = 'flex';
+}
+function showCustomConfirm(msg, cb) {
+  _cb = cb || null;
+  document.getElementById('cal-alert-msg').textContent = msg;
+  document.getElementById('cal-alert-btns').innerHTML = `<div style="display:flex;gap:8px">
+    <button class="btn-g" style="flex:1" onclick="closeAlert(false)">Bekor</button>
+    <button class="btn-p" style="flex:1" onclick="closeAlert(true)">Tasdiqlash</button>
+  </div>`;
+  document.getElementById('cal-alert').style.display = 'flex';
+}
+function closeAlert(res) {
+  document.getElementById('cal-alert').style.display = 'none';
+  const cb = _cb; _cb = null;
+  if (cb) cb(res);
+}
+
 function api(path, opts={}) {
   return fetch('/api/admin'+path, {
     ...opts,
@@ -155,390 +153,327 @@ function api(path, opts={}) {
   });
 }
 
-// ── Helpers ────────────────────────────────────────────────────────
 const fmtDate = s => { if(!s)return''; const[y,m,d]=s.split('-'); return`${d}.${m}.${y}`; };
-const fmtTime = t => { if(!t)return''; const[h,m]=t.split(':'); return m==='00'?`${+h}:00`:`${+h}:${m}`; };
-const isPast  = (d,t) => new Date(`${d}T${t}:00+05:00`)<=new Date();
-const cantCancel=(d,t)=> new Date(`${d}T${t}:00+05:00`)-new Date() <= 30*60*1000;
-
-const STATUS_LABEL = {confirmed:'Tasdiqlangan',cancelled:'Bekor',completed:'Yakunlangan',pending:'Kutilmoqda'};
-const STATUS_CLASS = {confirmed:'badge-confirmed',cancelled:'badge-cancelled',completed:'badge-completed',pending:'badge-pending'};
-
+const fmtTime = t => { if(!t)return''; const[h,m]=t.split(':'); return`${String(+h).padStart(2,'0')}:${m}`; };
+const isPast   = (d,t) => new Date(`${d}T${t}:00+05:00`) <= new Date();
+const cantCancel = (d,t) => new Date(`${d}T${t}:00+05:00`) - new Date() <= 30*60*1000;
+const toDateStr = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 const stars = n => '⭐'.repeat(n) + '☆'.repeat(5-n);
 
-// ── Cancel Modal ───────────────────────────────────────────────────
-let cancelId=null;
-function openCancel(id){ cancelId=id; document.getElementById('cancel-reason').value=''; document.getElementById('cancel-modal').classList.remove('hidden'); }
-function closeModal(){ document.getElementById('cancel-modal').classList.add('hidden'); cancelId=null; }
-async function confirmCancel(){
-  if(!cancelId)return;
-  const reason=document.getElementById('cancel-reason').value.trim();
-  try{
-    await api(`/appointments/${cancelId}/cancel`,{method:'POST',body:JSON.stringify({reason})});
-    closeModal(); tg.showAlert('✅ Qabul bekor qilindi'); refreshTab();
-  }catch(e){ tg.showAlert('❌ '+e.message); }
+const CLR = { confirmed:'#0a84ff', pending:'#ff9f0a', completed:'#30d158', cancelled:'#ff453a' };
+const LBL = { confirmed:'Tasdiqlangan', cancelled:'Bekor', completed:'Yakunlangan', pending:'Kutilmoqda' };
+
+let cancelId = null;
+function openCancel(id) { cancelId=id; document.getElementById('cancel-reason').value=''; document.getElementById('cancel-modal').classList.remove('hidden'); }
+function closeModal() { document.getElementById('cancel-modal').classList.add('hidden'); cancelId=null; }
+async function confirmCancel() {
+  if (!cancelId) return;
+  const reason = document.getElementById('cancel-reason').value.trim();
+  try {
+    await api(`/appointments/${cancelId}/cancel`, { method:'POST', body:JSON.stringify({ reason }) });
+    closeModal(); showCustomAlert('✅ Qabul bekor qilindi'); refreshTab();
+  } catch(e) { showCustomAlert('❌ '+e.message); }
 }
 
-// ── Apt Card ───────────────────────────────────────────────────────
-function aptCard(a, showCancel=true){
-  const past=isPast(a.timeSlot.date,a.timeSlot.time);
-  const cant=cantCancel(a.timeSlot.date,a.timeSlot.time);
-  const st=past?'completed':(a.status||'confirmed');
-  return `
-  <div class="card">
-    <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">
-      <div style="min-width:0">
-        <div style="font-weight:600;font-size:14px">🦷 ${a.service?.name||'—'}</div>
-        <div class="hint" style="font-size:12px;margin-top:2px">📅 ${fmtDate(a.timeSlot.date)} · ⏰ ${fmtTime(a.timeSlot.time)}</div>
-        <div style="font-size:14px;margin-top:6px">👤 ${a.clientName||'—'}</div>
-        <div class="hint" style="font-size:12px">📱 ${a.clientPhone||'—'}</div>
+function aptCard(a, showCancel=true) {
+  const past = isPast(a.timeSlot.date, a.timeSlot.time);
+  const cant = cantCancel(a.timeSlot.date, a.timeSlot.time);
+  const st = past ? 'completed' : (a.status || 'confirmed');
+  const c = CLR[st] || '#0a84ff';
+  const initials = (a.clientName||'?').split(' ').slice(0,2).map(w=>w[0]||'').join('').toUpperCase()||'?';
+  return `<div class="apt">
+    <div style="display:flex;gap:12px;align-items:flex-start">
+      <div class="apt-av" style="background:${c}1a;color:${c}">${initials}</div>
+      <div style="flex:1;min-width:0">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">
+          <div style="font-weight:600;font-size:14px;line-height:1.3">${a.clientName||'—'}</div>
+          <span class="pill" style="background:${c}1a;color:${c}">${LBL[st]||st}</span>
+        </div>
+        <div style="font-size:12px;color:var(--hint);margin-top:4px">🦷 ${a.service?.name||'—'}</div>
+        <div style="font-size:12px;color:var(--hint);margin-top:2px">📅 ${fmtDate(a.timeSlot.date)}&nbsp;&nbsp;⏰ ${fmtTime(a.timeSlot.time)}</div>
+        ${a.clientPhone?`<div style="font-size:12px;color:var(--hint);margin-top:2px">📱 ${a.clientPhone}</div>`:''}
       </div>
-      <span class="badge ${STATUS_CLASS[st]||'badge-confirmed'}">${STATUS_LABEL[st]||st}</span>
     </div>
-    ${showCancel&&!past&&!cant?`<div style="margin-top:10px"><button class="btn-red" onclick="openCancel(${a.id})">❌ Bekor qilish</button></div>`:''}
-    ${showCancel&&!past&&cant&&a.status!=='cancelled'?`<div class="hint" style="font-size:12px;margin-top:8px">⏳ 30 daqiqadan kam vaqt qoldi</div>`:''}
+    ${showCancel&&!past&&!cant?`<button onclick="openCancel(${a.id})" style="margin-top:12px;width:100%;padding:9px;background:rgba(255,69,58,.12);color:var(--red);border:none;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer">❌ Bekor qilish</button>`:''}
+    ${showCancel&&!past&&cant&&a.status!=='cancelled'?`<div style="text-align:center;font-size:11px;color:var(--hint);margin-top:10px">⏳ Bekor qilish muddati o'tdi (30 daqiqadan kam)</div>`:''}
   </div>`;
 }
 
-// ── TODAY ──────────────────────────────────────────────────────────
-async function loadToday(){
-  const el=document.getElementById('today-content');
-  el.innerHTML='<div class="spin"></div>';
-  try{
-    const list=await api('/appointments/today');
-    if(!list.length){ el.innerHTML='<p class="hint" style="text-align:center;margin-top:48px;font-size:14px">Bugun uchun qabul yo\'q</p>'; return; }
-    const now=new Date();
-    const future=list.filter(a=>new Date(`${a.timeSlot.date}T${a.timeSlot.time}:00+05:00`)>now);
-    const done  =list.filter(a=>new Date(`${a.timeSlot.date}T${a.timeSlot.time}:00+05:00`)<=now);
-    let html='';
-    if(future.length){ html+=`<div class="hint" style="font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;margin:12px 0 8px">Kelgusi (${future.length})</div>`; html+=future.map(a=>aptCard(a)).join(''); }
-    if(done.length){ html+=`<div class="hint" style="font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;margin:12px 0 8px">Yakunlangan (${done.length})</div>`; html+=done.map(a=>aptCard(a,false)).join(''); }
-    el.innerHTML=html;
-  }catch(e){ el.innerHTML=`<p style="color:var(--red);text-align:center;margin-top:48px;font-size:13px">${e.message}</p>`; }
-}
-
-// ── WEEK ───────────────────────────────────────────────────────────
-const UZ_DAYS=['Yakshanba','Dushanba','Seshanba','Chorshanba','Payshanba','Juma','Shanba'];
-async function loadWeek(){
-  const el=document.getElementById('week-content');
-  el.innerHTML='<div class="spin"></div>';
-  try{
-    const list=await api('/appointments/week');
-    if(!list.length){ el.innerHTML='<p class="hint" style="text-align:center;margin-top:48px;font-size:14px">Qabullar yo\'q</p>'; return; }
-    let html='',prev='';
-    for(const a of list){
-      if(a.timeSlot.date!==prev){
-        prev=a.timeSlot.date;
-        const day=UZ_DAYS[new Date(a.timeSlot.date+'T00:00:00+05:00').getDay()];
-        html+=`<div class="hint" style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin:14px 0 6px">${fmtDate(a.timeSlot.date)} · ${day}</div>`;
-      }
-      html+=aptCard(a);
+async function loadToday() {
+  const el = document.getElementById('today-content');
+  el.innerHTML = '<div class="spin"></div>';
+  try {
+    const list = await api('/appointments/today');
+    if (!list.length) {
+      el.innerHTML = `<div style="text-align:center;padding:60px 16px">
+        <div style="font-size:52px;margin-bottom:14px">📅</div>
+        <div style="font-size:17px;font-weight:700;margin-bottom:6px">Bugun qabul yo'q</div>
+        <div style="font-size:13px;color:var(--hint)">Yangi qabullar kirib kelgach shu yerda ko'rinadi</div>
+      </div>`;
+      return;
     }
-    el.innerHTML=html;
-  }catch(e){ el.innerHTML=`<p style="color:var(--red);text-align:center;margin-top:48px;font-size:13px">${e.message}</p>`; }
+    const now = new Date();
+    const future = list.filter(a => new Date(`${a.timeSlot.date}T${a.timeSlot.time}:00+05:00`) > now);
+    const done   = list.filter(a => new Date(`${a.timeSlot.date}T${a.timeSlot.time}:00+05:00`) <= now);
+    let html = `<div style="display:flex;gap:8px;margin:12px 0">
+      <div style="flex:1;background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:12px;text-align:center">
+        <div style="font-size:22px;font-weight:700;color:var(--btn)">${list.length}</div>
+        <div style="font-size:11px;color:var(--hint);margin-top:2px">Jami</div>
+      </div>
+      <div style="flex:1;background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:12px;text-align:center">
+        <div style="font-size:22px;font-weight:700;color:var(--green)">${future.length}</div>
+        <div style="font-size:11px;color:var(--hint);margin-top:2px">Kelgusi</div>
+      </div>
+      <div style="flex:1;background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:12px;text-align:center">
+        <div style="font-size:22px;font-weight:700;color:var(--hint)">${done.length}</div>
+        <div style="font-size:11px;color:var(--hint);margin-top:2px">O'tgan</div>
+      </div>
+    </div>`;
+    if (future.length) { html += `<div class="sec-t">Kelgusi (${future.length})</div>`; html += future.map(a=>aptCard(a)).join(''); }
+    if (done.length)   { html += `<div class="sec-t">O'tgan (${done.length})</div>`;   html += done.map(a=>aptCard(a,false)).join(''); }
+    el.innerHTML = html;
+  } catch(e) { el.innerHTML = `<p style="color:var(--red);text-align:center;margin-top:48px;font-size:13px">${e.message}</p>`; }
 }
 
-// ── STATS ──────────────────────────────────────────────────────────
-let monthChart=null, ratingChart=null;
-async function loadStats(){
-  const el=document.getElementById('stats-content');
-  el.innerHTML='<div class="spin"></div>';
-  try{
-    const s=await api('/stats');
-    const m=s.monthly||[];
-    const rv=s.reviewStats||{total:0,avg:0};
-    const UZ_MONTHS={};
-    ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'].forEach((n,i)=>UZ_MONTHS[String(i+1).padStart(2,'0')]=n);
-    const mLabels=m.map(x=>{ const[,mon]=x.month.split('-'); return UZ_MONTHS[mon]||mon; });
-    const mData=m.map(x=>x.count);
-    el.innerHTML=`
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
-      <div class="card" style="text-align:center"><div style="font-size:28px;font-weight:700;color:var(--btn)">${s.users}</div><div class="hint" style="font-size:11px;margin-top:2px">👥 Foydalanuvchilar</div></div>
-      <div class="card" style="text-align:center"><div style="font-size:28px;font-weight:700">${s.total}</div><div class="hint" style="font-size:11px;margin-top:2px">📋 Jami qabullar</div></div>
-      <div class="card" style="text-align:center"><div style="font-size:28px;font-weight:700;color:#34c759">${s.confirmed}</div><div class="hint" style="font-size:11px;margin-top:2px">✅ Tasdiqlangan</div></div>
-      <div class="card" style="text-align:center"><div style="font-size:28px;font-weight:700;color:#ff9500">${s.completed}</div><div class="hint" style="font-size:11px;margin-top:2px">✔️ Yakunlangan</div></div>
-      <div class="card" style="text-align:center;grid-column:span 2"><div style="font-size:28px;font-weight:700;color:var(--red)">${s.cancelled}</div><div class="hint" style="font-size:11px;margin-top:2px">❌ Bekor qilingan</div></div>
-    </div>
-    <div class="card" style="margin-bottom:14px">
-      <div style="font-weight:600;font-size:14px;margin-bottom:12px">📈 Oylik qabullar</div>
-      ${m.length?`<canvas id="month-chart" height="160"></canvas>`:'<p class="hint" style="text-align:center;font-size:13px">Ma\'lumot yo\'q</p>'}
+const UZ_DAYS = ['Yakshanba','Dushanba','Seshanba','Chorshanba','Payshanba','Juma','Shanba'];
+async function loadWeek() {
+  const el = document.getElementById('week-content');
+  el.innerHTML = '<div class="spin"></div>';
+  try {
+    const list = await api('/appointments/week');
+    if (!list.length) {
+      el.innerHTML = `<div style="text-align:center;padding:60px 16px"><div style="font-size:52px;margin-bottom:14px">📆</div><div style="font-size:17px;font-weight:700">Bu hafta qabul yo'q</div></div>`;
+      return;
+    }
+    let html = '', prev = '';
+    for (const a of list) {
+      if (a.timeSlot.date !== prev) {
+        prev = a.timeSlot.date;
+        const day = UZ_DAYS[new Date(a.timeSlot.date+'T00:00:00+05:00').getDay()];
+        html += `<div class="sec-t">${fmtDate(a.timeSlot.date)} · ${day}</div>`;
+      }
+      html += aptCard(a);
+    }
+    el.innerHTML = html;
+  } catch(e) { el.innerHTML = `<p style="color:var(--red);text-align:center;margin-top:48px;font-size:13px">${e.message}</p>`; }
+}
+
+let monthChart = null, ratingChart = null;
+async function loadStats() {
+  const el = document.getElementById('stats-content');
+  el.innerHTML = '<div class="spin"></div>';
+  try {
+    const s = await api('/stats');
+    const m = s.monthly || [];
+    const rv = s.reviewStats || { total:0, avg:0 };
+    const UZ_M = {};
+    ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'].forEach((n,i)=>UZ_M[String(i+1).padStart(2,'0')]=n);
+    const mLabels = m.map(x=>{ const[,mo]=x.month.split('-'); return UZ_M[mo]||mo; });
+    const mData = m.map(x=>x.count);
+    el.innerHTML = `
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:12px 0">
+      <div style="grid-column:span 2;background:linear-gradient(135deg,rgba(10,132,255,.14),rgba(191,90,242,.1));border:1px solid rgba(10,132,255,.22);border-radius:16px;padding:18px;text-align:center">
+        <div style="font-size:36px;font-weight:800;letter-spacing:-1.5px;color:var(--btn);line-height:1">${s.total}</div>
+        <div style="font-size:12px;color:var(--hint);margin-top:5px">📋 Jami qabullar</div>
+      </div>
+      <div class="card" style="margin:0"><div style="font-size:28px;font-weight:700;color:var(--green);letter-spacing:-.5px">${s.confirmed}</div><div style="font-size:11px;color:var(--hint);margin-top:3px">✅ Tasdiqlangan</div></div>
+      <div class="card" style="margin:0"><div style="font-size:28px;font-weight:700;color:var(--orange);letter-spacing:-.5px">${s.completed}</div><div style="font-size:11px;color:var(--hint);margin-top:3px">✔️ Yakunlangan</div></div>
+      <div class="card" style="margin:0"><div style="font-size:28px;font-weight:700;color:var(--red);letter-spacing:-.5px">${s.cancelled}</div><div style="font-size:11px;color:var(--hint);margin-top:3px">❌ Bekor</div></div>
+      <div class="card" style="margin:0"><div style="font-size:28px;font-weight:700;color:var(--btn);letter-spacing:-.5px">${s.users}</div><div style="font-size:11px;color:var(--hint);margin-top:3px">👥 Bemorlar</div></div>
     </div>
     <div class="card">
-      <div style="font-weight:600;font-size:14px;margin-bottom:4px">⭐ Mijozlar bahosi</div>
-      <div style="font-size:13px;margin-bottom:12px"><span style="font-size:22px;font-weight:700;color:#f59e0b">${rv.avg}</span> / 5 &nbsp;·&nbsp; ${rv.total} ta baho</div>
-      <canvas id="rating-chart" height="120"></canvas>
+      <div style="font-weight:600;font-size:14px;margin-bottom:14px">📈 Oylik qabullar</div>
+      ${m.length?`<canvas id="month-chart" height="150"></canvas>`:`<p style="color:var(--hint);text-align:center;font-size:13px;padding:20px 0">Ma'lumot yo'q</p>`}
+    </div>
+    <div class="card">
+      <div style="font-weight:600;font-size:14px;margin-bottom:6px">⭐ Mijozlar bahosi</div>
+      <div style="margin-bottom:14px"><span style="font-size:26px;font-weight:700;color:#ff9f0a">${rv.avg}</span><span style="font-size:13px;color:var(--hint)"> / 5 · ${rv.total} ta</span></div>
+      <canvas id="rating-chart" height="110"></canvas>
     </div>`;
-
-    if(m.length){
-      if(monthChart){monthChart.destroy();}
-      monthChart=new Chart(document.getElementById('month-chart'),{
+    if (m.length) {
+      if (monthChart) monthChart.destroy();
+      monthChart = new Chart(document.getElementById('month-chart'), {
         type:'bar',
-        data:{labels:mLabels,datasets:[{data:mData,backgroundColor:'rgba(0,122,255,.7)',borderRadius:6,borderSkipped:false}]},
-        options:{responsive:true,plugins:{legend:{display:false}},scales:{x:{grid:{color:'rgba(255,255,255,.05)'},ticks:{color:'#8e8e93',font:{size:11}}},y:{grid:{color:'rgba(255,255,255,.07)'},ticks:{color:'#8e8e93',font:{size:11},stepSize:1}}}}
+        data:{labels:mLabels,datasets:[{data:mData,backgroundColor:'rgba(10,132,255,.65)',borderRadius:7,borderSkipped:false}]},
+        options:{responsive:true,plugins:{legend:{display:false}},scales:{x:{grid:{color:'rgba(255,255,255,.04)'},ticks:{color:'#636366',font:{size:11}}},y:{grid:{color:'rgba(255,255,255,.06)'},ticks:{color:'#636366',font:{size:11},stepSize:1}}}}
       });
     }
-    if(ratingChart){ratingChart.destroy();}
-    ratingChart=new Chart(document.getElementById('rating-chart'),{
+    if (ratingChart) ratingChart.destroy();
+    ratingChart = new Chart(document.getElementById('rating-chart'), {
       type:'bar',
-      data:{labels:['1⭐','2⭐','3⭐','4⭐','5⭐'],datasets:[{data:[0,0,0,0,0],backgroundColor:'rgba(245,158,11,.75)',borderRadius:6,borderSkipped:false}]},
-      options:{responsive:true,plugins:{legend:{display:false}},scales:{x:{grid:{display:false},ticks:{color:'#8e8e93',font:{size:11}}},y:{grid:{color:'rgba(255,255,255,.07)'},ticks:{color:'#8e8e93',font:{size:11},stepSize:1}}}}
+      data:{labels:['1⭐','2⭐','3⭐','4⭐','5⭐'],datasets:[{data:[0,0,0,0,0],backgroundColor:'rgba(255,159,10,.7)',borderRadius:7,borderSkipped:false}]},
+      options:{responsive:true,plugins:{legend:{display:false}},scales:{x:{grid:{display:false},ticks:{color:'#636366',font:{size:11}}},y:{grid:{color:'rgba(255,255,255,.06)'},ticks:{color:'#636366',font:{size:11},stepSize:1}}}}
     });
-    // rating distribution
-    api('/reviews').then(reviews=>{
+    api('/reviews').then(reviews => {
       const dist=[0,0,0,0,0];
       reviews.forEach(r=>{ if(r.rating>=1&&r.rating<=5) dist[r.rating-1]++; });
-      ratingChart.data.datasets[0].data=dist;
-      ratingChart.update();
+      ratingChart.data.datasets[0].data=dist; ratingChart.update();
     }).catch(()=>{});
-  }catch(e){ el.innerHTML=`<p style="color:var(--red);text-align:center;margin-top:48px;font-size:13px">${e.message}</p>`; }
+  } catch(e) { el.innerHTML = `<p style="color:var(--red);text-align:center;margin-top:48px;font-size:13px">${e.message}</p>`; }
 }
 
-// ── REVIEWS ────────────────────────────────────────────────────────
-async function loadReviews(){
-  const el=document.getElementById('reviews-content');
-  el.innerHTML='<div class="spin"></div>';
-  try{
-    const list=await api('/reviews');
-    if(!list.length){ el.innerHTML='<p class="hint" style="text-align:center;margin-top:48px;font-size:14px">Hali fikr yo\'q</p>'; return; }
-    el.innerHTML=list.map(r=>`
-    <div class="card">
-      <div style="display:flex;justify-content:space-between;align-items:center">
-        <span style="font-size:18px;letter-spacing:1px">${stars(r.rating)}</span>
-        <span class="hint" style="font-size:12px">${r.appointmentDate?fmtDate(r.appointmentDate):''}</span>
+async function loadReviews() {
+  const el = document.getElementById('reviews-content');
+  el.innerHTML = '<div class="spin"></div>';
+  try {
+    const list = await api('/reviews');
+    if (!list.length) {
+      el.innerHTML = `<div style="text-align:center;padding:60px 16px"><div style="font-size:52px;margin-bottom:14px">⭐</div><div style="font-size:17px;font-weight:700">Hali fikr yo'q</div></div>`;
+      return;
+    }
+    el.innerHTML = list.map(r=>`<div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <span class="stars">${stars(r.rating)}</span>
+        <span style="font-size:12px;color:var(--hint)">${r.appointmentDate?fmtDate(r.appointmentDate):''}</span>
       </div>
-      <div style="font-size:14px;margin-top:6px">👤 ${r.clientName||'—'}</div>
-      ${r.serviceName?`<div class="hint" style="font-size:12px">🦷 ${r.serviceName}</div>`:''}
-      ${r.comment?`<div style="font-size:14px;margin-top:8px;padding:10px;background:var(--bg);border-radius:8px;line-height:1.4">"${r.comment}"</div>`:''}
+      <div style="font-weight:600;font-size:14px">${r.clientName||'—'}</div>
+      ${r.serviceName?`<div style="font-size:12px;color:var(--hint);margin-top:2px">🦷 ${r.serviceName}</div>`:''}
+      ${r.comment?`<div style="font-size:14px;margin-top:10px;padding:12px;background:var(--bg3);border-radius:10px;line-height:1.5;border:1px solid var(--border)">"${r.comment}"</div>`:''}
     </div>`).join('');
-  }catch(e){ el.innerHTML=`<p style="color:var(--red);text-align:center;margin-top:48px;font-size:13px">${e.message}</p>`; }
+  } catch(e) { el.innerHTML = `<p style="color:var(--red);text-align:center;margin-top:48px;font-size:13px">${e.message}</p>`; }
 }
 
-// ── SEARCH ─────────────────────────────────────────────────────────
-let searchTimer=null;
-async function onSearch(val){
+let searchTimer = null;
+async function onSearch(val) {
   clearTimeout(searchTimer);
-  const el=document.getElementById('search-content');
-  const hint=document.getElementById('search-hint');
-  if(!val||val.trim().length<2){
-    el.innerHTML='<div id="search-hint" class="hint" style="text-align:center;margin-top:32px;font-size:14px">Kamida 2 ta belgi kiriting</div>';
-    return;
-  }
-  searchTimer=setTimeout(async()=>{
-    el.innerHTML='<div class="spin"></div>';
-    try{
-      const list=await api('/appointments/search?q='+encodeURIComponent(val.trim()));
-      if(!list.length){ el.innerHTML='<p class="hint" style="text-align:center;margin-top:48px;font-size:14px">Topilmadi</p>'; return; }
-      el.innerHTML=list.map(a=>aptCard(a)).join('');
-    }catch(e){ el.innerHTML=`<p style="color:var(--red);text-align:center;font-size:13px;margin-top:32px">${e.message}</p>`; }
-  },400);
+  const el = document.getElementById('search-content');
+  if (!val||val.trim().length<2) { el.innerHTML='<div style="color:var(--hint);text-align:center;margin-top:32px;font-size:14px">Kamida 2 ta belgi kiriting</div>'; return; }
+  searchTimer = setTimeout(async () => {
+    el.innerHTML = '<div class="spin"></div>';
+    try {
+      const list = await api('/appointments/search?q='+encodeURIComponent(val.trim()));
+      if (!list.length) { el.innerHTML='<div style="color:var(--hint);text-align:center;margin-top:48px;font-size:14px">Topilmadi</div>'; return; }
+      el.innerHTML = list.map(a=>aptCard(a)).join('');
+    } catch(e) { el.innerHTML=`<p style="color:var(--red);text-align:center;font-size:13px;margin-top:32px">${e.message}</p>`; }
+  }, 400);
 }
 
-// ── SETTINGS ──────────────────────────────────────────────────────
-const DAY_LABELS=['','Du','Se','Ch','Pa','Ju','Sh','Ya'];
-let scheduleData=null, clinicData=null;
-let pendingHours=null;
+const DAY_LABELS = ['','Du','Se','Ch','Pa','Ju','Sh','Ya'];
+let scheduleData=null, clinicData=null, pendingHours=null;
 
-function allTimeSlots(){
+function allTimeSlots() {
   const s=[];
-  for(let h=8;h<=20;h++) for(let m=0;m<60;m+=30){
-    if(h===20&&m>0) break;
-    s.push(`${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`);
-  }
+  for(let h=8;h<=20;h++) for(let m=0;m<60;m+=30){ if(h===20&&m>0)break; s.push(`${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`); }
   return s;
 }
 
-function buildCalendar(sched){
-  const today = new Date();
-  // Find Monday of current week
-  const dow0 = today.getDay()===0?6:today.getDay()-1; // 0=Mon
-  const monday = new Date(today); monday.setDate(today.getDate()-dow0);
+function buildCalendar(sched) {
+  const today=new Date();
+  const dow0=today.getDay()===0?6:today.getDay()-1;
+  const monday=new Date(today); monday.setDate(today.getDate()-dow0);
   const cells=[];
-  // pad empty cells before Monday
   for(let i=0;i<dow0;i++) cells.push('<div></div>');
   for(let i=0;i<21;i++){
     const d=new Date(monday); d.setDate(monday.getDate()+i);
-    const ds=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+    const ds=toDateStr(d);
     const isToday=ds===toDateStr(new Date());
     const dow=d.getDay()===0?7:d.getDay();
-    const baseWork=(sched.workDays||[]).includes(dow);
-    const blocked=(sched.blockedDates||[]).includes(ds);
-    const extra=(sched.extraWorkDates||[]).includes(ds);
-    const isWork=extra||(baseWork&&!blocked);
-    const bg=isWork?'rgba(52,199,89,.18)':'rgba(255,59,48,.13)';
-    const border=isToday?'border:1.5px solid var(--btn)':'border:1.5px solid transparent';
-    cells.push(`<div id="cal-${ds}" onclick="toggleSpecialDate('${ds}')" style="border-radius:8px;padding:5px 0;cursor:pointer;background:${bg};${border};position:relative">
+    const isWork=(sched.extraWorkDates||[]).includes(ds)||((sched.workDays||[]).includes(dow)&&!(sched.blockedDates||[]).includes(ds));
+    cells.push(`<div id="cal-${ds}" onclick="toggleSpecialDate('${ds}')" style="border-radius:8px;padding:6px 2px;cursor:pointer;background:${isWork?'rgba(48,209,88,.18)':'rgba(255,69,58,.13)'};border:1.5px solid ${isToday?'var(--btn)':'transparent'};text-align:center">
       <div style="font-size:13px;font-weight:${isToday?700:400}">${d.getDate()}</div>
     </div>`);
   }
   return cells.join('');
 }
 
-function toDateStr(d){
-  return`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-}
-
-async function toggleSpecialDate(ds){
-  const el=document.getElementById('cal-'+ds);
-  if(!el)return;
+async function toggleSpecialDate(ds) {
+  const el=document.getElementById('cal-'+ds); if(!el)return;
   el.style.opacity='0.4';
-  try{
+  try {
     const res=await api('/schedule/toggle-date',{method:'POST',body:JSON.stringify({date:ds})});
-    // update local state
     if(res.isWorking){
       scheduleData.blockedDates=(scheduleData.blockedDates||[]).filter(x=>x!==ds);
-      if(!(scheduleData.extraWorkDates||[]).includes(ds)){
-        const dow=new Date(ds).getDay()===0?7:new Date(ds).getDay();
-        if(!(scheduleData.workDays||[]).includes(dow))
-          scheduleData.extraWorkDates=[...(scheduleData.extraWorkDates||[]),ds];
-      }
+      if(!(scheduleData.extraWorkDates||[]).includes(ds)){const dow=new Date(ds).getDay()===0?7:new Date(ds).getDay();if(!(scheduleData.workDays||[]).includes(dow))scheduleData.extraWorkDates=[...(scheduleData.extraWorkDates||[]),ds];}
     } else {
       scheduleData.extraWorkDates=(scheduleData.extraWorkDates||[]).filter(x=>x!==ds);
       const dow=new Date(ds).getDay()===0?7:new Date(ds).getDay();
-      if((scheduleData.workDays||[]).includes(dow))
-        scheduleData.blockedDates=[...(scheduleData.blockedDates||[]),ds];
+      if((scheduleData.workDays||[]).includes(dow))scheduleData.blockedDates=[...(scheduleData.blockedDates||[]),ds];
     }
-    // re-render calendar cell
     const dow=new Date(ds).getDay()===0?7:new Date(ds).getDay();
-    const baseWork=(scheduleData.workDays||[]).includes(dow);
-    const blocked=(scheduleData.blockedDates||[]).includes(ds);
-    const extra=(scheduleData.extraWorkDates||[]).includes(ds);
-    const isWork=extra||(baseWork&&!blocked);
-    el.style.background=isWork?'rgba(52,199,89,.18)':'rgba(255,59,48,.13)';
+    const isWork=(scheduleData.extraWorkDates||[]).includes(ds)||((scheduleData.workDays||[]).includes(dow)&&!(scheduleData.blockedDates||[]).includes(ds));
+    el.style.background=isWork?'rgba(48,209,88,.18)':'rgba(255,69,58,.13)';
     el.style.opacity='1';
-  }catch(e){ el.style.opacity='1'; tg.showAlert('❌ '+e.message); }
+  } catch(e) { el.style.opacity='1'; showCustomAlert('❌ '+e.message); }
 }
 
-async function loadSettings(){
+async function loadSettings() {
   const el=document.getElementById('settings-content');
   el.innerHTML='<div class="spin"></div>';
-  try{
-    [scheduleData, clinicData] = await Promise.all([api('/schedule'), api('/settings')]);
+  try {
+    [scheduleData,clinicData]=await Promise.all([api('/schedule'),api('/settings')]);
     pendingHours=[...scheduleData.workHours];
     renderSettings();
-  }catch(e){ el.innerHTML=`<p style="color:var(--red);text-align:center;margin-top:48px;font-size:13px">${e.message}</p>`; }
+  } catch(e) { el.innerHTML=`<p style="color:var(--red);text-align:center;margin-top:48px;font-size:13px">${e.message}</p>`; }
 }
 
-function renderSettings(){
+function renderSettings() {
   const el=document.getElementById('settings-content');
   const activeDays=scheduleData.workDays||[];
-  const allSlots=allTimeSlots();
-
-  const dayChips=([1,2,3,4,5,6,7]).map(d=>`
-    <span class="chip chip-sm ${activeDays.includes(d)?'on':''}" id="day-${d}" onclick="toggleDay(${d})">${DAY_LABELS[d]}</span>
-  `).join('');
-
-  const hourChips=allSlots.map(t=>`
-    <span class="chip chip-sm ${pendingHours.includes(t)?'on':''}" id="hour-${t.replace(':','-')}" onclick="toggleHour('${t}')">${t}</span>
-  `).join('');
-
-  // Build 21-day calendar
-  const calRows = buildCalendar(scheduleData);
-
+  const dayChips=[1,2,3,4,5,6,7].map(d=>`<span class="chip chip-sm ${activeDays.includes(d)?'on':''}" id="day-${d}" onclick="toggleDay(${d})">${DAY_LABELS[d]}</span>`).join('');
+  const hourChips=allTimeSlots().map(t=>`<span class="chip chip-sm ${pendingHours.includes(t)?'on':''}" id="hour-${t.replace(':','-')}" onclick="toggleHour('${t}')">${t}</span>`).join('');
   el.innerHTML=`
-  <div class="section-title">📅 Haftalik ish kunlari</div>
+  <div class="sec-t">📅 Haftalik ish kunlari</div>
+  <div class="card"><div style="display:flex;flex-wrap:wrap;gap:8px">${dayChips}</div></div>
+  <div class="sec-t">🗓 Maxsus kunlar (keyingi 21 kun)</div>
   <div class="card">
-    <div style="display:flex;flex-wrap:wrap;gap:8px">${dayChips}</div>
-  </div>
-
-  <div class="section-title">🗓 Maxsus kunlar (keyingi 21 kun)</div>
-  <div class="card">
-    <p class="hint" style="font-size:11px;margin:0 0 10px">Ish kunini bosing — dam olish kunga, dam olish kunini bosing — ish kunga o'tadi</p>
+    <div style="font-size:12px;color:var(--hint);margin-bottom:10px">Bosing: ish kuni ↔ dam olish kuni</div>
     <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;text-align:center">
       ${['Du','Se','Ch','Pa','Ju','Sh','Ya'].map(d=>`<div style="font-size:10px;color:var(--hint);font-weight:600;padding-bottom:4px">${d}</div>`).join('')}
-      ${calRows}
+      ${buildCalendar(scheduleData)}
     </div>
   </div>
-
-  <div class="section-title">⏰ Ish soatlari</div>
+  <div class="sec-t">⏰ Ish soatlari</div>
   <div class="card">
-    <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px" id="hours-grid">${hourChips}</div>
-    <button class="btn-primary" onclick="saveHours()">Saqlash</button>
+    <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px" id="hours-grid">${hourChips}</div>
+    <button class="btn-p" onclick="saveHours()">💾 Saqlash</button>
   </div>
-
-  <div class="section-title">🏥 Klinika ma'lumotlari</div>
+  <div class="sec-t">🏥 Klinika ma'lumotlari</div>
   <div class="card">
-    <label class="form-label">Klinika nomi</label>
-    <input class="form-input" id="cf-name" value="${clinicData.name||''}" placeholder="Nomi"/>
-    <label class="form-label">Telefon</label>
-    <input class="form-input" id="cf-phone" value="${clinicData.phone||''}" placeholder="+998 ..."/>
-    <label class="form-label">Manzil</label>
-    <input class="form-input" id="cf-address" value="${clinicData.address||''}" placeholder="Manzil"/>
-    <label class="form-label">Telegram (username)</label>
-    <input class="form-input" id="cf-tg" value="${clinicData.telegram||''}" placeholder="@username"/>
-    <label class="form-label">Xarita URL</label>
-    <input class="form-input" id="cf-maps" value="${clinicData.mapsUrl||''}" placeholder="https://maps.app.goo.gl/..."/>
-    <button class="btn-primary" onclick="saveClinicInfo()">Saqlash</button>
+    <label class="f-lbl">Klinika nomi</label><input class="f-inp" id="cf-name" value="${clinicData.name||''}" placeholder="Nomi"/>
+    <label class="f-lbl">Telefon</label><input class="f-inp" id="cf-phone" value="${clinicData.phone||''}" placeholder="+998 ..."/>
+    <label class="f-lbl">Manzil</label><input class="f-inp" id="cf-address" value="${clinicData.address||''}" placeholder="Manzil"/>
+    <label class="f-lbl">Telegram</label><input class="f-inp" id="cf-tg" value="${clinicData.telegram||''}" placeholder="@username"/>
+    <label class="f-lbl">Xarita URL</label><input class="f-inp" id="cf-maps" value="${clinicData.mapsUrl||''}" placeholder="https://maps.app.goo.gl/..."/>
+    <button class="btn-p" onclick="saveClinicInfo()">💾 Saqlash</button>
   </div>`;
 }
 
-async function toggleDay(d){
-  const el=document.getElementById('day-'+d);
+async function toggleDay(d) {
   const days=scheduleData.workDays||[];
   const newDays=days.includes(d)?days.filter(x=>x!==d):[...days,d].sort((a,b)=>a-b);
-  try{
+  try {
     await api('/schedule/days',{method:'PUT',body:JSON.stringify({days:newDays})});
     scheduleData.workDays=newDays;
-    el.classList.toggle('on',newDays.includes(d));
-  }catch(e){ tg.showAlert('❌ '+e.message); }
+    document.getElementById('day-'+d).classList.toggle('on',newDays.includes(d));
+  } catch(e) { showCustomAlert('❌ '+e.message); }
 }
-
-function toggleHour(t){
-  const el=document.getElementById('hour-'+t.replace(':','-'));
+function toggleHour(t) {
   if(pendingHours.includes(t)) pendingHours=pendingHours.filter(x=>x!==t);
   else pendingHours=[...pendingHours,t].sort();
-  el.classList.toggle('on',pendingHours.includes(t));
+  document.getElementById('hour-'+t.replace(':','-')).classList.toggle('on',pendingHours.includes(t));
+}
+async function saveHours() {
+  if(!pendingHours.length){showCustomAlert('Kamida 1 ta soat tanlang');return;}
+  try { await api('/schedule/hours',{method:'PUT',body:JSON.stringify({hours:pendingHours})}); scheduleData.workHours=pendingHours; showCustomAlert('✅ Soatlar saqlandi'); }
+  catch(e){showCustomAlert('❌ '+e.message);}
+}
+async function saveClinicInfo() {
+  const body={name:document.getElementById('cf-name').value.trim(),phone:document.getElementById('cf-phone').value.trim(),address:document.getElementById('cf-address').value.trim(),telegram:document.getElementById('cf-tg').value.trim(),mapsUrl:document.getElementById('cf-maps').value.trim()};
+  try { await api('/settings',{method:'PUT',body:JSON.stringify(body)}); showCustomAlert('✅ Ma\'lumotlar saqlandi'); }
+  catch(e){showCustomAlert('❌ '+e.message);}
 }
 
-async function saveHours(){
-  if(pendingHours.length===0){ tg.showAlert('Kamida 1 ta soat tanlang'); return; }
-  try{
-    await api('/schedule/hours',{method:'PUT',body:JSON.stringify({hours:pendingHours})});
-    scheduleData.workHours=pendingHours;
-    tg.showAlert('✅ Soatlar saqlandi');
-  }catch(e){ tg.showAlert('❌ '+e.message); }
-}
-
-async function saveClinicInfo(){
-  const body={
-    name: document.getElementById('cf-name').value.trim(),
-    phone: document.getElementById('cf-phone').value.trim(),
-    address: document.getElementById('cf-address').value.trim(),
-    telegram: document.getElementById('cf-tg').value.trim(),
-    mapsUrl: document.getElementById('cf-maps').value.trim(),
-  };
-  try{
-    await api('/settings',{method:'PUT',body:JSON.stringify(body)});
-    tg.showAlert('✅ Ma\'lumotlar saqlandi');
-  }catch(e){ tg.showAlert('❌ '+e.message); }
-}
-
-// ── Tabs ───────────────────────────────────────────────────────────
 const TABS=['today','week','stats','reviews','search','settings'];
 let curTab='today';
 const loaded={};
-
 function switchTab(tab){
   curTab=tab;
-  TABS.forEach(t=>{
-    document.getElementById('sec-'+t).classList.toggle('active',t===tab);
-    document.getElementById('tab-'+t).classList.toggle('on',t===tab);
-  });
-  if(!loaded[tab]){ loaded[tab]=true; loadTabFn(tab); }
+  TABS.forEach(t=>{ document.getElementById('sec-'+t).classList.toggle('active',t===tab); document.getElementById('tab-'+t).classList.toggle('on',t===tab); });
+  if(!loaded[tab]){loaded[tab]=true;loadTabFn(tab);}
 }
-
-function loadTabFn(tab){
-  if(tab==='today')loadToday();
-  else if(tab==='week')loadWeek();
-  else if(tab==='stats')loadStats();
-  else if(tab==='reviews')loadReviews();
-  else if(tab==='settings')loadSettings();
-}
-
+function loadTabFn(tab){ if(tab==='today')loadToday(); else if(tab==='week')loadWeek(); else if(tab==='stats')loadStats(); else if(tab==='reviews')loadReviews(); else if(tab==='settings')loadSettings(); }
 function refreshTab(){ delete loaded[curTab]; loadTabFn(curTab); }
-
-// init
-loaded['today']=true;
-loadToday();
+loaded['today']=true; loadToday();
 </script>
 </body>
 </html>
