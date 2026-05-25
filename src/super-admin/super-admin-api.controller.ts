@@ -4,7 +4,7 @@ import {
   ForbiddenException, BadRequestException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, MoreThanOrEqual } from 'typeorm';
 import { ConfigService } from '@nestjs/config';
 import { createHmac } from 'crypto';
 import { ClinicsService } from '../clinics/clinics.service';
@@ -14,6 +14,10 @@ import { PromosService } from '../promos/promos.service';
 import { SuperAdminBotService } from './super-admin-bot.service';
 import { ClinicBotsService } from '../clinic-bots/clinic-bots.service';
 import { Broadcast } from '../database/entities/broadcast.entity';
+import { Appointment, AppointmentStatus } from '../database/entities/appointment.entity';
+import { User } from '../database/entities/user.entity';
+import { Review } from '../database/entities/review.entity';
+import { Payment, PaymentStatus } from '../database/entities/payment.entity';
 
 @Controller('api/super-admin')
 export class SuperAdminApiController {
@@ -29,6 +33,10 @@ export class SuperAdminApiController {
     private readonly superAdminBotService: SuperAdminBotService,
     private readonly clinicBotsService: ClinicBotsService,
     @InjectRepository(Broadcast) private readonly broadcastRepo: Repository<Broadcast>,
+    @InjectRepository(Appointment) private readonly appointmentRepo: Repository<Appointment>,
+    @InjectRepository(User) private readonly userRepo: Repository<User>,
+    @InjectRepository(Review) private readonly reviewRepo: Repository<Review>,
+    @InjectRepository(Payment) private readonly paymentRepo: Repository<Payment>,
   ) {
     this.botToken = configService.get<string>('superAdmin.botToken') || '';
     this.adminIds = configService.get<number[]>('superAdmin.ids') || [];
@@ -79,6 +87,48 @@ export class SuperAdminApiController {
   async getArchivedClinics(@Headers('x-init-data') d: string) {
     this.validate(d);
     return this.clinicsService.findDeleted();
+  }
+
+  @Get('clinics/:id/stats')
+  async getClinicStats(@Param('id', ParseIntPipe) id: number, @Headers('x-init-data') d: string) {
+    this.validate(d);
+    const now = new Date();
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+
+    const [total, thisMonth, pending, confirmed, completed, cancelled, totalUsers, reviews, payments] =
+      await Promise.all([
+        this.appointmentRepo.count({ where: { clinic: { id } } }),
+        this.appointmentRepo.count({ where: { clinic: { id }, createdAt: MoreThanOrEqual(startOfMonth) } }),
+        this.appointmentRepo.count({ where: { clinic: { id }, status: AppointmentStatus.PENDING } }),
+        this.appointmentRepo.count({ where: { clinic: { id }, status: AppointmentStatus.CONFIRMED } }),
+        this.appointmentRepo.count({ where: { clinic: { id }, status: AppointmentStatus.COMPLETED } }),
+        this.appointmentRepo.count({ where: { clinic: { id }, status: AppointmentStatus.CANCELLED } }),
+        this.userRepo.count({ where: { clinic: { id }, isAdmin: false } }),
+        this.reviewRepo.find({ where: { clinic: { id } }, select: ['rating'] }),
+        this.paymentRepo.find({
+          where: { clinic: { id }, status: PaymentStatus.CONFIRMED },
+          relations: ['plan'],
+          order: { createdAt: 'DESC' },
+        }),
+      ]);
+
+    const avgRating = reviews.length
+      ? (reviews.reduce((s, r) => s + r.rating, 0) / reviews.length).toFixed(1)
+      : null;
+    const totalPaid = payments.reduce((s, p) => s + p.amount, 0);
+    const lastPayment = payments[0] ?? null;
+
+    return {
+      appointments: { total, thisMonth, pending, confirmed, completed, cancelled },
+      users: { total: totalUsers },
+      reviews: { total: reviews.length, avgRating },
+      payments: {
+        count: payments.length,
+        totalAmount: totalPaid,
+        lastPaymentDate: lastPayment?.createdAt ?? null,
+        lastPlanName: lastPayment?.plan?.name ?? null,
+      },
+    };
   }
 
   @Get('clinics/:id')

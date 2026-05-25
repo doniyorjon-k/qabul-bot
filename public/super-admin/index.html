@@ -272,8 +272,59 @@ function openClinicDetail(id) {
       <button class="btn-gray btn-sm" onclick="openClinicEdit(${id})">✏️ Tahrirlash</button>
       <button class="btn-red btn-sm" onclick="deleteClinic(${id})">🗑 O'chirish</button>
     </div>
-    <button class="btn-gray" style="width:100%;margin-top:10px" onclick="closeModal()">Yopish</button>
+    <button class="btn-primary" style="width:100%;margin-top:10px" onclick="loadClinicStats(${id})">📊 Statistika</button>
+    <button class="btn-gray" style="width:100%;margin-top:8px" onclick="closeModal()">Yopish</button>
   `);
+}
+
+async function loadClinicStats(id) {
+  const c = allClinics.find(x => x.id === id);
+  openModal(`<div style="text-align:center;padding:24px 0"><div class="spin"></div><div class="hint" style="font-size:13px;margin-top:8px">Yuklanmoqda...</div></div>`);
+  try {
+    const s = await api(`/clinics/${id}/stats`);
+    const fmtAmt = n => n ? n.toLocaleString('ru-RU') + ' so\'m' : '0';
+    const lastPay = s.payments.lastPaymentDate
+      ? new Date(s.payments.lastPaymentDate).toLocaleDateString('ru-RU')
+      : '—';
+    openModal(`
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px">
+        <b style="font-size:16px">📊 ${c?.name || 'Klinika'}</b>
+      </div>
+
+      <div class="section-title">📅 Qabullar</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">
+        <div class="card" style="text-align:center"><div style="font-size:22px;font-weight:700;color:var(--btn)">${s.appointments.total}</div><div class="hint" style="font-size:11px">Jami</div></div>
+        <div class="card" style="text-align:center"><div style="font-size:22px;font-weight:700;color:#af52de">${s.appointments.thisMonth}</div><div class="hint" style="font-size:11px">Bu oy</div></div>
+        <div class="card" style="text-align:center"><div style="font-size:22px;font-weight:700;color:#ff9500">${s.appointments.pending}</div><div class="hint" style="font-size:11px">Kutmoqda</div></div>
+        <div class="card" style="text-align:center"><div style="font-size:22px;font-weight:700;color:#34c759">${s.appointments.confirmed}</div><div class="hint" style="font-size:11px">Tasdiqlangan</div></div>
+        <div class="card" style="text-align:center"><div style="font-size:22px;font-weight:700;color:var(--btn)">${s.appointments.completed}</div><div class="hint" style="font-size:11px">Bajarilgan</div></div>
+        <div class="card" style="text-align:center"><div style="font-size:22px;font-weight:700;color:var(--red)">${s.appointments.cancelled}</div><div class="hint" style="font-size:11px">Bekor</div></div>
+      </div>
+
+      <div class="section-title">👤 Bemorlar</div>
+      <div class="card" style="text-align:center;margin-bottom:12px">
+        <div style="font-size:22px;font-weight:700;color:var(--btn)">${s.users.total}</div>
+        <div class="hint" style="font-size:11px">Ro'yxatdan o'tgan</div>
+      </div>
+
+      <div class="section-title">⭐ Sharhlar</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">
+        <div class="card" style="text-align:center"><div style="font-size:22px;font-weight:700;color:#ff9500">${s.reviews.total}</div><div class="hint" style="font-size:11px">Jami sharh</div></div>
+        <div class="card" style="text-align:center"><div style="font-size:22px;font-weight:700;color:#ff9500">${s.reviews.avgRating ?? '—'}</div><div class="hint" style="font-size:11px">O'rtacha reyting</div></div>
+      </div>
+
+      <div class="section-title">💳 Obuna to'lovlari</div>
+      <div class="card" style="margin-bottom:12px">
+        <div style="display:flex;justify-content:space-between;margin-bottom:4px"><span class="hint" style="font-size:12px">Tasdiqlangan to'lovlar</span><b>${s.payments.count} ta</b></div>
+        <div style="display:flex;justify-content:space-between;margin-bottom:4px"><span class="hint" style="font-size:12px">Jami to'langan</span><b style="color:#34c759">${fmtAmt(s.payments.totalAmount)}</b></div>
+        <div style="display:flex;justify-content:space-between"><span class="hint" style="font-size:12px">Oxirgi to'lov</span><b>${lastPay}${s.payments.lastPlanName ? ' · ' + s.payments.lastPlanName : ''}</b></div>
+      </div>
+
+      <button class="btn-gray" style="width:100%" onclick="closeModal()">Yopish</button>
+    `);
+  } catch(e) {
+    openModal(`<p style="color:var(--red);text-align:center;margin:32px 0">${e.message}</p><button class="btn-gray" style="width:100%" onclick="closeModal()">Yopish</button>`);
+  }
 }
 
 async function clinicAction(id, action) {
