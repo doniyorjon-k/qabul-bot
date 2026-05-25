@@ -19,6 +19,9 @@ export class Clinic {
   @Column()
   botToken: string;
 
+  @Column({ nullable: true })
+  adminBotToken: string | null;
+
   @Column({ type: 'json', default: '[]' })
   adminIds: number[];
 

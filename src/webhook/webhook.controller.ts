@@ -15,6 +15,15 @@ export class WebhookController {
     return { ok: true };
   }
 
+  @Post('admin/:clinicId')
+  async handleAdminWebhook(
+    @Param('clinicId', ParseIntPipe) clinicId: number,
+    @Body() update: any,
+  ) {
+    await this.clinicBotsService.handleAdminWebhook(clinicId, update);
+    return { ok: true };
+  }
+
   @Post(':clinicId')
   async handleWebhook(
     @Param('clinicId', ParseIntPipe) clinicId: number,

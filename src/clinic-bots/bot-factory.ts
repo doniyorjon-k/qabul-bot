@@ -97,6 +97,7 @@ export function setupBotHandlers(
   services: BotServices,
   appUrl: string,
   superAdminIds: number[] = [],
+  adminOnly = false,
 ) {
   const adminIds = new Set<number>(clinic.adminIds);
   const isAdmin = (userId: number) => adminIds.has(userId);
@@ -127,8 +128,19 @@ export function setupBotHandlers(
     };
   };
 
+  // ── /admin buyrug'i URL (used by both /admin command and adm:back) ─
+  const miniAppUrl = appUrl ? `${appUrl}/admin/?clinicId=${clinicId}` : undefined;
+
   // ── /start ────────────────────────────────────────────────────────
   bot.start(async (ctx) => {
+    if (adminOnly) {
+      if (!isAdmin(ctx.from.id)) {
+        await ctx.reply('⛔ Bu bot faqat klinika admini uchun mo\'ljallangan.');
+        return;
+      }
+      await ctx.reply('👨‍⚕️ *Admin panel*', { parse_mode: 'Markdown', ...adminMainKb(miniAppUrl) });
+      return;
+    }
     const from = ctx.from;
     await services.usersService.findOrCreate(from.id, clinicId, from.username);
     clearUSess(from.id);
@@ -153,6 +165,8 @@ export function setupBotHandlers(
       await ctx.reply('🦷 Qaysi xizmatga yozilmoqchisiz?', buildServicesKeyboard(svcList));
     }
   });
+
+  if (!adminOnly) {
 
   // ── Bosh menyu ────────────────────────────────────────────────────
   bot.hears('🏠 Bosh menyu', async (ctx) => {
@@ -501,9 +515,9 @@ export function setupBotHandlers(
     await ctx.reply('🏠 Bosh menyu:', mainMenuKeyboard());
   });
 
-  // ── /admin buyrug'i ───────────────────────────────────────────────
-  const miniAppUrl = appUrl ? `${appUrl}/admin/?clinicId=${clinicId}` : undefined;
+  } // end if (!adminOnly)
 
+  // ── /admin buyrug'i ───────────────────────────────────────────────
   bot.command('admin', async (ctx) => {
     if (!isAdmin(ctx.from.id)) { await ctx.reply('⛔ Sizda admin huquqi yo\'q.'); return; }
     await ctx.reply('👨‍⚕️ *Admin panel*', { parse_mode: 'Markdown', ...adminMainKb(miniAppUrl) });
@@ -1306,7 +1320,8 @@ export function setupBotHandlers(
       }
     }
 
-    // User session handling
+    // User session handling (skip for admin-only bots)
+    if (adminOnly) return next();
     if (text === '❌ Bekor qilish') { clearUSess(userId); await ctx.reply('❌ Bekor qilindi.', mainMenuKeyboard()); return; }
     if (text === '⬅️ Orqaga') { await handleBack(ctx, getUSess(userId)); return; }
 

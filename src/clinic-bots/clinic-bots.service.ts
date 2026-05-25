@@ -22,6 +22,7 @@ import * as http from 'http';
 export class ClinicBotsService implements OnModuleInit {
   private readonly logger = new Logger(ClinicBotsService.name);
   private bots = new Map<number, Telegraf>();
+  private adminBots = new Map<number, Telegraf>();
 
   constructor(
     private readonly configService: ConfigService,
@@ -43,21 +44,13 @@ export class ClinicBotsService implements OnModuleInit {
     const clinics = await this.clinicsService.findActive();
     for (const clinic of clinics) {
       await this.startBot(clinic);
+      if (clinic.adminBotToken) await this.startAdminBot(clinic);
     }
-    this.logger.log(`${this.bots.size} ta bot ishga tushirildi`);
+    this.logger.log(`${this.bots.size} ta user bot, ${this.adminBots.size} ta admin bot ishga tushirildi`);
   }
 
-  getBot(clinicId: number): Telegraf | undefined {
-    return this.bots.get(clinicId);
-  }
-
-  async startBot(clinic: Clinic): Promise<void> {
-    if (this.bots.has(clinic.id)) return;
-
-    const webhookUrl = this.configService.get<string>('app.url');
-    const bot = new Telegraf(clinic.botToken);
-
-    const services: BotServices = {
+  private buildServices(): BotServices {
+    return {
       usersService: this.usersService,
       servicesService: this.servicesService,
       appointmentsService: this.appointmentsService,
@@ -71,43 +64,72 @@ export class ClinicBotsService implements OnModuleInit {
       plansService: this.plansService,
       promosService: this.promosService,
     };
+  }
 
+  getBot(clinicId: number): Telegraf | undefined {
+    return this.bots.get(clinicId);
+  }
+
+  async startBot(clinic: Clinic): Promise<void> {
+    if (this.bots.has(clinic.id)) return;
+    const webhookUrl = this.configService.get<string>('app.url');
+    const bot = new Telegraf(clinic.botToken);
     const superAdminIds = this.configService.get<number[]>('superAdmin.ids') || [];
-    setupBotHandlers(bot, clinic.id, clinic, services, webhookUrl || '', superAdminIds);
-
+    setupBotHandlers(bot, clinic.id, clinic, this.buildServices(), webhookUrl || '', superAdminIds);
     if (webhookUrl) {
-      const webhookPath = `/webhook/${clinic.id}`;
       try {
-        await bot.telegram.setWebhook(`${webhookUrl}${webhookPath}`);
-        this.logger.log(`Clinic ${clinic.id} webhook: ${webhookUrl}${webhookPath}`);
+        await bot.telegram.setWebhook(`${webhookUrl}/webhook/${clinic.id}`);
+        this.logger.log(`Clinic ${clinic.id} user bot webhook set`);
       } catch (e) {
-        this.logger.error(`Clinic ${clinic.id} webhook setup error: ${e.message}`);
+        this.logger.error(`Clinic ${clinic.id} webhook error: ${e.message}`);
       }
     } else {
-      bot.launch().catch((e) => this.logger.error(`Clinic ${clinic.id} polling error: ${e.message}`));
+      bot.launch().catch((e) => this.logger.error(`Clinic ${clinic.id} polling: ${e.message}`));
     }
-
     this.bots.set(clinic.id, bot);
+  }
+
+  async startAdminBot(clinic: Clinic): Promise<void> {
+    if (this.adminBots.has(clinic.id) || !clinic.adminBotToken) return;
+    const webhookUrl = this.configService.get<string>('app.url');
+    const bot = new Telegraf(clinic.adminBotToken);
+    const superAdminIds = this.configService.get<number[]>('superAdmin.ids') || [];
+    setupBotHandlers(bot, clinic.id, clinic, this.buildServices(), webhookUrl || '', superAdminIds, true);
+    if (webhookUrl) {
+      try {
+        await bot.telegram.setWebhook(`${webhookUrl}/webhook/admin/${clinic.id}`);
+        this.logger.log(`Clinic ${clinic.id} admin bot webhook set`);
+      } catch (e) {
+        this.logger.error(`Clinic ${clinic.id} admin bot webhook error: ${e.message}`);
+      }
+    } else {
+      bot.launch().catch((e) => this.logger.error(`Clinic ${clinic.id} admin bot polling: ${e.message}`));
+    }
+    this.adminBots.set(clinic.id, bot);
   }
 
   async stopBot(clinicId: number): Promise<void> {
     const bot = this.bots.get(clinicId);
-    if (!bot) return;
-    try {
-      await bot.telegram.deleteWebhook();
-      bot.stop();
-    } catch {}
-    this.bots.delete(clinicId);
+    if (bot) {
+      try { await bot.telegram.deleteWebhook(); bot.stop(); } catch {}
+      this.bots.delete(clinicId);
+    }
+    await this.stopAdminBot(clinicId);
   }
 
-  // Called from NotificationsService — send to users of a specific clinic
+  async stopAdminBot(clinicId: number): Promise<void> {
+    const bot = this.adminBots.get(clinicId);
+    if (!bot) return;
+    try { await bot.telegram.deleteWebhook(); bot.stop(); } catch {}
+    this.adminBots.delete(clinicId);
+  }
+
   async sendMessage(clinicId: number, chatId: number, text: string, extra?: any): Promise<void> {
-    const bot = this.bots.get(clinicId);
+    const bot = this.bots.get(clinicId) || this.adminBots.get(clinicId);
     if (!bot) return;
     await bot.telegram.sendMessage(chatId, text, extra);
   }
 
-  // Keep-alive ping for a clinic's app URL
   keepAlive() {
     const appUrl = this.configService.get<string>('app.url');
     if (!appUrl) return;
@@ -116,9 +138,14 @@ export class ClinicBotsService implements OnModuleInit {
     client.get(url, () => {}).on('error', () => {});
   }
 
-  // Handle incoming webhook update for a clinic
   async handleWebhook(clinicId: number, update: any): Promise<void> {
     const bot = this.bots.get(clinicId);
+    if (!bot) return;
+    await (bot as any).handleUpdate(update);
+  }
+
+  async handleAdminWebhook(clinicId: number, update: any): Promise<void> {
+    const bot = this.adminBots.get(clinicId);
     if (!bot) return;
     await (bot as any).handleUpdate(update);
   }

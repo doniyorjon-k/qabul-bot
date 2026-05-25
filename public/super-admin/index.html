@@ -16,9 +16,9 @@
     .spin{border:2px solid var(--bg2);border-top-color:var(--btn);border-radius:50%;width:28px;height:28px;animation:sp .7s linear infinite;margin:48px auto}
     @keyframes sp{to{transform:rotate(360deg)}}
     .tab-bar{position:fixed;bottom:0;left:0;right:0;display:flex;background:var(--bg2);border-top:1px solid rgba(142,142,147,.25);z-index:20}
-    .tab{flex:1;display:flex;flex-direction:column;align-items:center;padding:8px 0 6px;gap:2px;border:none;background:none;color:var(--hint);font-size:9px;cursor:pointer}
+    .tab{flex:1;display:flex;flex-direction:column;align-items:center;padding:12px 4px 10px;gap:4px;border:none;background:none;color:var(--hint);font-size:11px;cursor:pointer;min-height:60px}
     .tab.on{color:var(--btn)}
-    .tab svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.7}
+    .tab svg{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:1.7}
     .btn-primary{background:var(--btn);color:var(--btn-txt);border:none;border-radius:10px;padding:10px 16px;font-size:14px;font-weight:600;cursor:pointer;width:100%}
     .btn-red{background:var(--red);color:#fff;border:none;border-radius:10px;padding:8px 14px;font-size:13px;font-weight:600;cursor:pointer}
     .btn-gray{background:var(--bg);color:var(--hint);border:none;border-radius:10px;padding:8px 14px;font-size:13px;cursor:pointer}
@@ -183,18 +183,24 @@ function renderClinics() {
 
 function setFilter(f) { clinicFilter = f; renderClinics(); }
 
+function toDateInput(iso) {
+  if (!iso) return '';
+  return iso.slice(0, 10);
+}
+
 function openClinicDetail(id) {
   const c = allClinics.find(x => x.id === id);
   if (!c) return;
-  const endsAt = c.subscriptionEndsAt || c.trialEndsAt;
-  const endsStr = endsAt ? new Date(endsAt).toLocaleDateString('ru-RU') : 'Cheksiz';
+  const trialStr = c.trialEndsAt ? new Date(c.trialEndsAt).toLocaleDateString('ru-RU') : '—';
+  const subStr = c.subscriptionEndsAt ? new Date(c.subscriptionEndsAt).toLocaleDateString('ru-RU') : '—';
   const isSuspended = c.status === 'suspended';
   openModal(`
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
       <b style="font-size:16px">🏥 ${c.name}</b>${STATUS_BADGE[c.status]||''}
     </div>
-    <p class="hint" style="font-size:12px;margin:0 0 4px">ID: ${c.id}</p>
-    <p class="hint" style="font-size:12px;margin:0 0 12px">Muddat: ${endsStr}</p>
+    <p class="hint" style="font-size:12px;margin:0 0 2px">ID: ${c.id}</p>
+    <p class="hint" style="font-size:12px;margin:0 0 2px">Trial: ${trialStr}</p>
+    <p class="hint" style="font-size:12px;margin:0 0 12px">Obuna: ${subStr}</p>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
       ${isSuspended
         ? `<button class="btn-primary" style="grid-column:span 2" onclick="clinicAction(${id},'activate')">✅ Faollashtirish</button>`
@@ -202,6 +208,8 @@ function openClinicDetail(id) {
            <button class="btn-gray btn-sm" onclick="clinicAction(${id},'extend-trial')">➕7 kun</button>
            <button class="btn-red btn-sm" style="grid-column:span 2" onclick="clinicAction(${id},'suspend')">⛔ To'xtatish</button>`
       }
+      <button class="btn-gray btn-sm" onclick="openClinicEdit(${id})">✏️ Tahrirlash</button>
+      <button class="btn-red btn-sm" onclick="deleteClinic(${id})">🗑 O'chirish</button>
     </div>
     <button class="btn-gray" style="width:100%;margin-top:10px" onclick="closeModal()">Yopish</button>
   `);
@@ -217,14 +225,81 @@ async function clinicAction(id, action) {
   } catch(e) { tg.showAlert('❌ ' + e.message); }
 }
 
+async function deleteClinic(id) {
+  const c = allClinics.find(x => x.id === id);
+  tg.showConfirm(`"${c?.name}" klinikasini o'chirasizmi? Bu amalni qaytarib bo'lmaydi!`, async (ok) => {
+    if (!ok) return;
+    try {
+      await api(`/clinics/${id}`, { method: 'DELETE' });
+      closeModal();
+      tg.showAlert('🗑 Klinika o\'chirildi');
+      allClinics = await api('/clinics');
+      renderClinics();
+    } catch(e) { tg.showAlert('❌ ' + e.message); }
+  });
+}
+
+function openClinicEdit(id) {
+  const c = allClinics.find(x => x.id === id);
+  if (!c) return;
+  openModal(`
+    <b style="font-size:15px">✏️ Klinikani tahrirlash</b>
+    <div style="margin-top:12px">
+      <label class="form-label">Nomi</label>
+      <input class="form-input" id="ec-name" value="${c.name||''}"/>
+      <label class="form-label">User Bot Token</label>
+      <input class="form-input" id="ec-token" value="${c.botToken||''}"/>
+      <label class="form-label">Admin Bot Token (ixtiyoriy — alohida admin bot)</label>
+      <input class="form-input" id="ec-admin-token" placeholder="Bo'sh qoldirsa bitta bot ishlatiladi" value="${c.adminBotToken||''}"/>
+      <label class="form-label">Admin IDlar (vergul bilan)</label>
+      <input class="form-input" id="ec-admins" value="${(c.adminIds||[]).join(',')}"/>
+      <label class="form-label">Trial tugash sanasi</label>
+      <input class="form-input" type="date" id="ec-trial" value="${toDateInput(c.trialEndsAt)}"/>
+      <label class="form-label">Obuna tugash sanasi</label>
+      <input class="form-input" type="date" id="ec-sub" value="${toDateInput(c.subscriptionEndsAt)}"/>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:8px">
+      <button class="btn-gray" style="flex:1" onclick="closeModal()">Bekor</button>
+      <button class="btn-primary" style="flex:1" onclick="saveClinicEdit(${id})">Saqlash</button>
+    </div>
+  `);
+}
+
+async function saveClinicEdit(id) {
+  const name = document.getElementById('ec-name').value.trim();
+  const botToken = document.getElementById('ec-token').value.trim();
+  const adminBotToken = document.getElementById('ec-admin-token').value.trim();
+  const adminsRaw = document.getElementById('ec-admins').value.trim();
+  const trialVal = document.getElementById('ec-trial').value;
+  const subVal = document.getElementById('ec-sub').value;
+  if (!name || !botToken) { tg.showAlert('Nom va token kiritilishi shart'); return; }
+  const adminIds = adminsRaw ? adminsRaw.split(',').map(Number).filter(Boolean) : [];
+  const body = {
+    name, botToken,
+    adminBotToken: adminBotToken || null,
+    adminIds,
+    trialEndsAt: trialVal ? new Date(trialVal).toISOString() : null,
+    subscriptionEndsAt: subVal ? new Date(subVal).toISOString() : null,
+  };
+  try {
+    await api(`/clinics/${id}`, { method: 'PUT', body: JSON.stringify(body) });
+    closeModal();
+    tg.showAlert('✅ Saqlandi');
+    allClinics = await api('/clinics');
+    renderClinics();
+  } catch(e) { tg.showAlert('❌ ' + e.message); }
+}
+
 function openNewClinicModal() {
   openModal(`
     <b style="font-size:15px">➕ Yangi klinika</b>
     <div style="margin-top:12px">
       <label class="form-label">Nomi</label>
       <input class="form-input" id="nc-name" placeholder="Smile Dental"/>
-      <label class="form-label">Bot Token</label>
+      <label class="form-label">User Bot Token</label>
       <input class="form-input" id="nc-token" placeholder="123456:ABC..."/>
+      <label class="form-label">Admin Bot Token (ixtiyoriy)</label>
+      <input class="form-input" id="nc-admin-token" placeholder="Alohida admin bot bo'lsa kiritiladi"/>
       <label class="form-label">Admin ID (vergul bilan)</label>
       <input class="form-input" id="nc-admins" placeholder="123456789"/>
     </div>
@@ -238,11 +313,12 @@ function openNewClinicModal() {
 async function createClinic() {
   const name = document.getElementById('nc-name').value.trim();
   const token = document.getElementById('nc-token').value.trim();
+  const adminToken = document.getElementById('nc-admin-token').value.trim();
   const adminsRaw = document.getElementById('nc-admins').value.trim();
   if (!name || !token) { tg.showAlert('Nom va token kiritilishi shart'); return; }
   const adminIds = adminsRaw ? adminsRaw.split(',').map(Number).filter(Boolean) : [];
   try {
-    await api('/clinics', { method: 'POST', body: JSON.stringify({ name, botToken: token, adminIds }) });
+    await api('/clinics', { method: 'POST', body: JSON.stringify({ name, botToken: token, adminBotToken: adminToken || null, adminIds }) });
     closeModal();
     tg.showAlert('✅ Klinika yaratildi');
     allClinics = await api('/clinics');

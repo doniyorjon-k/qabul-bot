@@ -88,16 +88,36 @@ export class SuperAdminApiController {
     const clinic = await this.clinicsService.create({
       name: body.name,
       botToken: body.botToken,
+      adminBotToken: body.adminBotToken || null,
       adminIds: body.adminIds || [],
     });
     await this.clinicBotsService.startBot(clinic);
+    if (clinic.adminBotToken) await this.clinicBotsService.startAdminBot(clinic);
     return clinic;
   }
 
   @Put('clinics/:id')
   async updateClinic(@Param('id', ParseIntPipe) id: number, @Body() body: any, @Headers('x-init-data') d: string) {
     this.validate(d);
-    await this.clinicsService.update(id, body);
+    const allowed = ['name', 'botToken', 'adminBotToken', 'adminIds', 'trialEndsAt', 'subscriptionEndsAt', 'status'];
+    const patch: Record<string, any> = {};
+    for (const k of allowed) if (body[k] !== undefined) patch[k] = body[k] === '' ? null : body[k];
+    await this.clinicsService.update(id, patch);
+    const clinic = await this.clinicsService.findById(id);
+    if (clinic.adminBotToken) {
+      await this.clinicBotsService.stopAdminBot(id);
+      await this.clinicBotsService.startAdminBot(clinic);
+    } else {
+      await this.clinicBotsService.stopAdminBot(id);
+    }
+    return { ok: true };
+  }
+
+  @Delete('clinics/:id')
+  async deleteClinic(@Param('id', ParseIntPipe) id: number, @Headers('x-init-data') d: string) {
+    this.validate(d);
+    await this.clinicBotsService.stopBot(id);
+    await this.clinicsService.delete(id);
     return { ok: true };
   }
 

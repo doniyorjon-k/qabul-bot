@@ -47,6 +47,7 @@ export class ClinicsService implements OnModuleInit {
   async create(data: {
     name: string;
     botToken: string;
+    adminBotToken?: string | null;
     adminIds: number[];
     status?: ClinicStatus;
     trialEndsAt?: Date | null;
@@ -59,6 +60,7 @@ export class ClinicsService implements OnModuleInit {
     const clinic = await this.repo.save(this.repo.create({
       name: data.name,
       botToken: data.botToken,
+      adminBotToken: data.adminBotToken ?? null,
       adminIds: data.adminIds,
       status: data.status ?? ClinicStatus.TRIAL,
       trialEndsAt,
@@ -124,6 +126,10 @@ export class ClinicsService implements OnModuleInit {
 
   async update(id: number, data: Partial<Clinic>): Promise<void> {
     await this.repo.update(id, data);
+  }
+
+  async delete(id: number): Promise<void> {
+    await this.repo.delete(id);
   }
 
   async updateAdminIds(id: number, adminIds: number[]): Promise<void> {

@@ -16,6 +16,7 @@ export class SuperAdminBotService implements OnModuleInit {
   private superAdminIds: number[] = [];
   private miniAppUrl = '';
   private rejectSessions = new Map<number, number>(); // userId -> paymentId
+  private editDateSessions = new Map<number, { clinicId: number; field: string }>(); // userId -> pending date edit
 
   constructor(
     private readonly configService: ConfigService,
@@ -160,6 +161,41 @@ export class SuperAdminBotService implements OnModuleInit {
       });
     });
 
+    bot.action(/^sa:clinic:delete:(\d+)$/, async (ctx) => {
+      await ctx.answerCbQuery();
+      if (!this.isSA(ctx.from.id)) return;
+      const id = parseInt((ctx as any).match[1]);
+      await this.clinicBotsService.stopBot(id);
+      await this.clinicsService.delete(id);
+      await ctx.editMessageText('🗑 Klinika o\'chirildi.', {
+        ...Markup.inlineKeyboard([[Markup.button.callback('⬅️ Klinikalar', 'sa:clinics')]]),
+      });
+    });
+
+    // Set trial end date
+    bot.action(/^sa:clinic:settrial:(\d+)$/, async (ctx) => {
+      await ctx.answerCbQuery();
+      if (!this.isSA(ctx.from.id)) return;
+      const id = parseInt((ctx as any).match[1]);
+      this.editDateSessions.set(ctx.from.id, { clinicId: id, field: 'trialEndsAt' });
+      await ctx.editMessageText(
+        `📅 Trial tugash sanasini kiriting:\nFormat: *YYYY-MM-DD* (masalan: 2025-06-30)`,
+        { parse_mode: 'Markdown', ...Markup.inlineKeyboard([[Markup.button.callback('🚫 Bekor', `sa:clinic:${id}`)]]) },
+      );
+    });
+
+    // Set subscription end date
+    bot.action(/^sa:clinic:setsub:(\d+)$/, async (ctx) => {
+      await ctx.answerCbQuery();
+      if (!this.isSA(ctx.from.id)) return;
+      const id = parseInt((ctx as any).match[1]);
+      this.editDateSessions.set(ctx.from.id, { clinicId: id, field: 'subscriptionEndsAt' });
+      await ctx.editMessageText(
+        `📅 Obuna tugash sanasini kiriting:\nFormat: *YYYY-MM-DD* (masalan: 2025-12-31)`,
+        { parse_mode: 'Markdown', ...Markup.inlineKeyboard([[Markup.button.callback('🚫 Bekor', `sa:clinic:${id}`)]]) },
+      );
+    });
+
     bot.action(/^sa:pay:confirm:(\d+)$/, async (ctx) => {
       await ctx.answerCbQuery();
       if (!this.isSA(ctx.from.id)) return;
@@ -179,10 +215,30 @@ export class SuperAdminBotService implements OnModuleInit {
 
     bot.on('text', async (ctx, next) => {
       if (!this.isSA(ctx.from.id)) return next();
+      const text = (ctx.message as any).text as string;
+
+      // Date editing
+      const dateEdit = this.editDateSessions.get(ctx.from.id);
+      if (dateEdit) {
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(text)) {
+          await ctx.reply('❌ Noto\'g\'ri format. YYYY-MM-DD kiriting:');
+          return;
+        }
+        this.editDateSessions.delete(ctx.from.id);
+        const date = new Date(text + 'T00:00:00.000Z');
+        await this.clinicsService.update(dateEdit.clinicId, { [dateEdit.field]: date });
+        await ctx.reply(`✅ ${dateEdit.field === 'trialEndsAt' ? 'Trial' : 'Obuna'} muddati yangilandi: *${text}*`, {
+          parse_mode: 'Markdown',
+          ...Markup.inlineKeyboard([[Markup.button.callback('⬅️ Klinikaga qaytish', `sa:clinic:${dateEdit.clinicId}`)]]),
+        });
+        return;
+      }
+
+      // Payment rejection reason
       const paymentId = this.rejectSessions.get(ctx.from.id);
       if (!paymentId) return next();
       this.rejectSessions.delete(ctx.from.id);
-      await this.rejectPayment(ctx, paymentId, (ctx.message as any).text);
+      await this.rejectPayment(ctx, paymentId, text);
     });
   }
 
@@ -260,7 +316,14 @@ export class SuperAdminBotService implements OnModuleInit {
         btns.push([Markup.button.callback('➕ 7 kun sinov', `sa:clinic:trial:${clinicId}`)]);
       }
     }
-    btns.push([Markup.button.callback('⬅️ Klinikalar', 'sa:clinics')]);
+    btns.push([
+      Markup.button.callback('📅 Trial muddati', `sa:clinic:settrial:${clinicId}`),
+      Markup.button.callback('📅 Obuna muddati', `sa:clinic:setsub:${clinicId}`),
+    ]);
+    btns.push([
+      Markup.button.callback('🗑 O\'chirish', `sa:clinic:delete:${clinicId}`),
+      Markup.button.callback('⬅️ Klinikalar', 'sa:clinics'),
+    ]);
     await ctx.editMessageText(text, { parse_mode: 'Markdown', ...Markup.inlineKeyboard(btns) });
   }
 
