@@ -13,7 +13,7 @@ export class Payment {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @ManyToOne(() => Clinic)
+  @ManyToOne(() => Clinic, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'clinic_id' })
   clinic: Clinic;
 
