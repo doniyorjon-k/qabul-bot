@@ -177,7 +177,10 @@ function renderClinics() {
           </div>
           <span class="badge badge-suspended">Arxiv</span>
         </div>
-        <button class="btn-primary btn-sm" style="margin-top:10px;width:100%" onclick="restoreClinic(${c.id},'${c.name.replace(/'/g,'&#39;')}')">♻️ Tiklash</button>
+        <div style="display:flex;gap:8px;margin-top:10px">
+          <button class="btn-primary btn-sm" style="flex:1" onclick="restoreClinic(${c.id},'${c.name.replace(/'/g,'&#39;')}')">♻️ Tiklash</button>
+          <button class="btn-red btn-sm" style="flex:1" onclick="permanentDeleteClinic(${c.id},'${c.name.replace(/'/g,'&#39;')}')">🗑 Butunlay o'chirish</button>
+        </div>
       </div>`;
     }).join('');
     el.innerHTML = `
@@ -259,6 +262,18 @@ async function deleteClinic(id) {
       await api(`/clinics/${id}`, { method: 'DELETE' });
       closeModal();
       tg.showAlert('🗄 Klinika arxivlandi');
+      [allClinics, archivedClinics] = await Promise.all([api('/clinics'), api('/clinics/archived').catch(()=>[])]);
+      renderClinics();
+    } catch(e) { tg.showAlert('❌ ' + e.message); }
+  });
+}
+
+async function permanentDeleteClinic(id, name) {
+  tg.showConfirm(`⚠️ "${name}" klinikasini BUTUNLAY o'chirasizmi?\n\nBarcha ma'lumotlar (qabullar, sozlamalar, xizmatlar) o'chib ketadi. Bu amalni QAYTARIB BO'LMAYDI!`, async (ok) => {
+    if (!ok) return;
+    try {
+      await api(`/clinics/${id}/permanent`, { method: 'DELETE' });
+      tg.showAlert('🗑 Klinika butunlay o\'chirildi');
       [allClinics, archivedClinics] = await Promise.all([api('/clinics'), api('/clinics/archived').catch(()=>[])]);
       renderClinics();
     } catch(e) { tg.showAlert('❌ ' + e.message); }

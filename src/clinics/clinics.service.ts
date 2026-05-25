@@ -132,6 +132,10 @@ export class ClinicsService implements OnModuleInit {
     await this.repo.softDelete(id);
   }
 
+  async hardDelete(id: number): Promise<void> {
+    await this.repo.delete(id);
+  }
+
   async restore(id: number): Promise<void> {
     await this.repo.restore(id);
   }

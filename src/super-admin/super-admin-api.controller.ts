@@ -136,6 +136,13 @@ export class SuperAdminApiController {
     return { ok: true };
   }
 
+  @Delete('clinics/:id/permanent')
+  async permanentDeleteClinic(@Param('id', ParseIntPipe) id: number, @Headers('x-init-data') d: string) {
+    this.validate(d);
+    await this.clinicsService.hardDelete(id);
+    return { ok: true };
+  }
+
   @Post('clinics/:id/suspend')
   async suspend(@Param('id', ParseIntPipe) id: number, @Headers('x-init-data') d: string) {
     this.validate(d);
