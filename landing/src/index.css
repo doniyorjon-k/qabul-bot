@@ -94,10 +94,11 @@ img { max-width: 100%; display: block; }
   display: flex; align-items: center; gap: 8px;
 }
 .nav-logo-icon {
-  background: var(--blue); color: #fff; border-radius: 8px;
-  width: 32px; height: 32px; display: flex;
-  align-items: center; justify-content: center; font-size: 16px;
+  width: 36px; height: 36px; border-radius: 8px;
+  overflow: hidden; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
 }
+.nav-logo-icon img { height: 90px; width: auto; flex-shrink: 0; }
 .nav-links { display: flex; align-items: center; gap: 28px; }
 .nav-links a {
   font-size: 14px; font-weight: 500; color: var(--med); transition: color .2s;
