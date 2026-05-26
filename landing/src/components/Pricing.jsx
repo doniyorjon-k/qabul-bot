@@ -1,61 +1,100 @@
+import { useState, useEffect } from 'react'
 import Reveal from './Reveal'
 
-const scrollToContact = (e) => { e.preventDefault(); document.getElementById('contact')?.scrollIntoView({ behavior: 'smooth' }) }
+const API_URL = import.meta.env.VITE_API_URL || ''
 
-const plans = [
-  {
-    name: 'Sinov davri',
-    price: 'Bepul',
-    period: '14 kun to\'liq imkoniyat',
-    features: [
-      'Barcha funksiyalar ochiq',
-      'Bot sozlash yordam',
-      'Cheksiz qabul',
-      'Eslatmalar tizimi',
-      'Admin panel',
-    ],
-    cta: 'Bepul boshlash',
-    btnCls: 'btn-outline',
-    featured: false,
-  },
-  {
-    name: 'Oylik',
-    price: '99,000',
-    currency: 'so\'m',
-    period: 'oyiga / 1 klinika',
-    features: [
-      'Barcha funksiyalar',
-      'Cheksiz qabul va bemor',
-      'Eslatmalar tizimi',
-      'Baholash tizimi',
-      'Admin mini panel',
-      'Texnik qo\'llab-quvvatlash',
-    ],
-    cta: 'Boshlash →',
-    btnCls: 'btn-primary',
-    featured: true,
-    badge: 'Eng mashhur',
-  },
-  {
-    name: 'Yillik',
-    price: '799,000',
-    currency: 'so\'m',
-    period: 'yiliga',
-    oldPrice: '1,188,000',
-    saving: '33% tejash',
-    features: [
-      'Oylik barcha imkoniyatlar',
-      'Ustuvor qo\'llab-quvvatlash',
-      'Yangi funksiyalar birinchi',
-      'Promo va chegirmalar',
-    ],
-    cta: 'Tejab boshlash',
-    btnCls: 'btn-outline',
-    featured: false,
-  },
+const scrollToContact = (e) => {
+  e.preventDefault()
+  document.getElementById('contact')?.scrollIntoView({ behavior: 'smooth' })
+}
+
+function fmtPrice(n) {
+  return n.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',')
+}
+
+const TRIAL = {
+  name: 'Sinov davri',
+  price: 'Bepul',
+  period: "14 kun to'liq imkoniyat",
+  features: [
+    'Barcha funksiyalar ochiq',
+    'Bot sozlash yordam',
+    'Cheksiz qabul',
+    'Eslatmalar tizimi',
+    'Admin panel',
+  ],
+  cta: 'Bepul boshlash',
+  btnCls: 'btn-outline',
+  featured: false,
+}
+
+const MONTHLY_META = {
+  currency: "so'm",
+  period: 'oyiga / 1 klinika',
+  features: [
+    'Barcha funksiyalar',
+    'Cheksiz qabul va bemor',
+    'Eslatmalar tizimi',
+    'Baholash tizimi',
+    'Admin mini panel',
+    "Texnik qo'llab-quvvatlash",
+  ],
+  cta: 'Boshlash →',
+  btnCls: 'btn-primary',
+  featured: true,
+  badge: 'Eng mashhur',
+}
+
+const YEARLY_META = {
+  currency: "so'm",
+  period: 'yiliga',
+  features: [
+    'Oylik barcha imkoniyatlar',
+    "Ustuvor qo'llab-quvvatlash",
+    'Yangi funksiyalar birinchi',
+    'Promo va chegirmalar',
+  ],
+  cta: 'Tejab boshlash',
+  btnCls: 'btn-outline',
+  featured: false,
+}
+
+// Static fallback shown while API loads or on failure
+const STATIC_PLANS = [
+  TRIAL,
+  { name: 'Oylik',  price: '99,000',  ...MONTHLY_META },
+  { name: 'Yillik', price: '799,000', oldPrice: '1,188,000', saving: '33% tejash', ...YEARLY_META },
 ]
 
+function buildCards(apiPlans) {
+  const monthly = apiPlans.find((p) => p.slug === 'monthly')
+  const yearly  = apiPlans.find((p) => p.slug === 'yearly')
+  return [
+    TRIAL,
+    monthly ? { name: monthly.name, price: fmtPrice(monthly.price), ...MONTHLY_META } : null,
+    yearly && monthly
+      ? {
+          name: yearly.name,
+          price: fmtPrice(yearly.price),
+          oldPrice: fmtPrice(monthly.price * 12),
+          saving: `${Math.round((1 - yearly.price / (monthly.price * 12)) * 100)}% tejash`,
+          ...YEARLY_META,
+        }
+      : null,
+  ].filter(Boolean)
+}
+
 export default function Pricing() {
+  const [plans, setPlans] = useState(STATIC_PLANS)
+
+  useEffect(() => {
+    if (!API_URL) return
+    fetch(`${API_URL}/api/public/pricing`)
+      .then((r) => r.json())
+      .then((data) => setPlans(buildCards(data)))
+      .catch(() => {})
+  }, [])
+
   return (
     <section id="pricing" className="section section-bg">
       <div className="container">

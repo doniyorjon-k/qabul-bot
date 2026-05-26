@@ -35,6 +35,7 @@ import { ClinicBotsModule } from './clinic-bots/clinic-bots.module';
 import { WebhookModule } from './webhook/webhook.module';
 import { SuperAdminBotModule } from './super-admin/super-admin-bot.module';
 import { SuperAdminApiModule } from './super-admin/super-admin-api.module';
+import { PublicApiModule } from './public-api/public-api.module';
 
 @Module({
   controllers: [AppController],
@@ -71,6 +72,7 @@ import { SuperAdminApiModule } from './super-admin/super-admin-api.module';
     WebhookModule,
     SuperAdminBotModule,
     SuperAdminApiModule,
+    PublicApiModule,
     AdminApiModule,
     UsersModule,
     ServicesModule,
