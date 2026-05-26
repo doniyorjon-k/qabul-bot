@@ -29,6 +29,7 @@ export default function Nav() {
         <div className="nav-inner">
           <a href="#" className="nav-logo">
             <img src="/logo-icon.png" alt="Qabulim" className="nav-logo-icon" />
+            <span className="nav-logo-text">Qabulim</span>
           </a>
           <div className="nav-links">
             {links.map((l) => (
