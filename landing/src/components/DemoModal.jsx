@@ -40,6 +40,20 @@ const RULES = {
   },
 }
 
+function Field({ id, label, optional, children, fieldError, hint }) {
+  return (
+    <div className="cf-group">
+      <label className="cf-label">
+        {label}
+        {optional && <span className="cf-optional"> (ixtiyoriy)</span>}
+      </label>
+      {children}
+      {fieldError && <span className="cf-field-error">{fieldError}</span>}
+      {hint && !fieldError && hint}
+    </div>
+  )
+}
+
 const BOTFATHER_STEPS = [
   'Telegramda @BotFather ni oching',
   "/newbot buyrug'ini yuboring",
@@ -166,18 +180,6 @@ export default function DemoModal({ onClose }) {
     }
   }
 
-  const Field = ({ id, label, optional, children, hint }) => (
-    <div className="cf-group">
-      <label className="cf-label">
-        {label}
-        {optional && <span className="cf-optional"> (ixtiyoriy)</span>}
-      </label>
-      {children}
-      {err(id) && <span className="cf-field-error">{err(id)}</span>}
-      {hint && !err(id) && hint}
-    </div>
-  )
-
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-card reg-card" onClick={(e) => e.stopPropagation()}>
@@ -217,7 +219,7 @@ export default function DemoModal({ onClose }) {
                 <h3 className="modal-title">Ro'yxatdan o'tish</h3>
                 <p className="modal-sub">Ma'lumotlaringizni kiriting</p>
                 <form className="cf-form" onSubmit={goToStep2} noValidate>
-                  <Field id="ownerName" label="Ismingiz">
+                  <Field id="ownerName" label="Ismingiz" fieldError={err('ownerName')}>
                     <input
                       className={`cf-input${err('ownerName') ? ' cf-input-err' : ''}`}
                       type="text" placeholder="Sardor Raximov"
@@ -226,7 +228,7 @@ export default function DemoModal({ onClose }) {
                       onBlur={touch('ownerName')}
                     />
                   </Field>
-                  <Field id="phone" label="Telefon raqam">
+                  <Field id="phone" label="Telefon raqam" fieldError={err('phone')}>
                     <input
                       ref={phoneRef}
                       className={`cf-input${err('phone') ? ' cf-input-err' : ''}`}
@@ -238,7 +240,7 @@ export default function DemoModal({ onClose }) {
                       onBlur={touch('phone')}
                     />
                   </Field>
-                  <Field id="clinicName" label="Klinika nomi">
+                  <Field id="clinicName" label="Klinika nomi" fieldError={err('clinicName')}>
                     <input
                       className={`cf-input${err('clinicName') ? ' cf-input-err' : ''}`}
                       type="text" placeholder="Smile Dental"
@@ -271,7 +273,7 @@ export default function DemoModal({ onClose }) {
                 </div>
 
                 <form className="cf-form" onSubmit={handleSubmit} noValidate>
-                  <Field id="botToken" label="Bot token">
+                  <Field id="botToken" label="Bot token" fieldError={err('botToken')}>
                     <input
                       className={`cf-input${err('botToken') ? ' cf-input-err' : ''}`}
                       type="text"
@@ -286,6 +288,7 @@ export default function DemoModal({ onClose }) {
                   <Field
                     id="adminTelegramId"
                     label="Sizning Telegram ID"
+                    fieldError={err('adminTelegramId')}
                     optional
                     hint={
                       <div className="cf-admin-hint">
