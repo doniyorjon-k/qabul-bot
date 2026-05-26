@@ -52,7 +52,6 @@ const plans = [
     cta: 'Tejab boshlash',
     btnCls: 'btn-outline',
     featured: false,
-    note: '💡 2 oy bepul',
   },
 ]
 
@@ -106,7 +105,6 @@ export default function Pricing() {
                 >
                   {plan.cta}
                 </a>
-                {plan.note && <p className="price-trial-note">{plan.note}</p>}
               </div>
             </Reveal>
           ))}

@@ -1,4 +1,36 @@
+import { useRef } from 'react'
 import Reveal from './Reveal'
+
+function TiltCard({ children }) {
+  const ref = useRef(null)
+
+  const onMove = (e) => {
+    const card = ref.current
+    if (!card) return
+    const rect = card.getBoundingClientRect()
+    const x = e.clientX - rect.left
+    const y = e.clientY - rect.top
+    const cx = rect.width / 2
+    const cy = rect.height / 2
+    const rx = ((y - cy) / cy) * 6
+    const ry = ((cx - x) / cx) * 6
+    card.style.transform = `perspective(900px) rotateX(${rx}deg) rotateY(${ry}deg) translateY(-6px)`
+    card.style.transition = 'transform 0.1s ease'
+  }
+
+  const onLeave = () => {
+    const card = ref.current
+    if (!card) return
+    card.style.transform = ''
+    card.style.transition = 'transform 0.5s ease'
+  }
+
+  return (
+    <div ref={ref} className="feature-card" onMouseMove={onMove} onMouseLeave={onLeave}>
+      {children}
+    </div>
+  )
+}
 
 const features = [
   { icon: '📅', color: 'fi-blue',   title: 'Onlayn qabul',          desc: 'Bemor xizmatni tanlaydi, bo\'sh kunni ko\'radi, soat belgilaydi. Hech qanday to\'siq yo\'q.' },
@@ -21,11 +53,11 @@ export default function Features() {
         <div className="features-grid">
           {features.map((f, i) => (
             <Reveal key={i} delay={(i % 3) * 100}>
-              <div className="feature-card">
+              <TiltCard>
                 <div className={`feature-icon ${f.color}`}>{f.icon}</div>
                 <h3>{f.title}</h3>
                 <p>{f.desc}</p>
-              </div>
+              </TiltCard>
             </Reveal>
           ))}
         </div>

@@ -15,7 +15,9 @@ const heroMessages = [
 export default function Hero() {
   return (
     <section id="hero" className="hero">
-      <div className="hero-bg-blur" />
+      <div className="hero-blob hero-blob-1" />
+      <div className="hero-blob hero-blob-2" />
+      <div className="hero-blob hero-blob-3" />
       <div className="container">
         <div className="hero-inner">
           <div className="hero-left">
