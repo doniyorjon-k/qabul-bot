@@ -1,6 +1,6 @@
 import { useRef } from 'react'
 import Reveal from './Reveal'
-import { parseEmoji } from '../utils/twemoji'
+import { Calendar, Bell, LayoutDashboard, Star, Stethoscope, CalendarDays } from 'lucide-react'
 
 function TiltCard({ children }) {
   const ref = useRef(null)
@@ -34,12 +34,12 @@ function TiltCard({ children }) {
 }
 
 const features = [
-  { icon: '📅', color: 'fi-blue',   title: 'Onlayn qabul',          desc: 'Bemor xizmatni tanlaydi, bo\'sh kunni ko\'radi, soat belgilaydi. Hech qanday to\'siq yo\'q.' },
-  { icon: '🔔', color: 'fi-orange', title: 'Avtomatik eslatmalar',   desc: 'Qabul oldidan 1 kun, 2 soat va 10 daqiqa oldin bemor Telegramda eslatma oladi.' },
-  { icon: '📊', color: 'fi-purple', title: 'Admin mini panel',       desc: 'Bugungi qabullar, statistika, xizmatlarni boshqarish — barchasini Telegram ichidan.' },
-  { icon: '⭐', color: 'fi-green',  title: 'Baholash tizimi',        desc: 'Qabul tugagandan so\'ng bemor avtomatik baholashga chaqiriladi. Fikrlar saqlanadi.' },
-  { icon: '🦷', color: 'fi-teal',   title: 'Xizmatlar katalogi',     desc: 'Har bir xizmatga nom, emoji va narx qo\'ying. Kerak bo\'lmasa o\'chirib qo\'ying.' },
-  { icon: '🗓️', color: 'fi-pink',  title: 'Moslashuvchan jadval',   desc: 'Ish kunlari, soatlari, dam olish kunlari va maxsus sana bloklash — to\'liq nazorat.' },
+  { Icon: Calendar,        color: 'fi-blue',   iconColor: '#2563eb', title: 'Onlayn qabul',          desc: 'Bemor xizmatni tanlaydi, bo\'sh kunni ko\'radi, soat belgilaydi. Hech qanday to\'siq yo\'q.' },
+  { Icon: Bell,            color: 'fi-orange',  iconColor: '#ea580c', title: 'Avtomatik eslatmalar',   desc: 'Qabul oldidan 1 kun, 2 soat va 10 daqiqa oldin bemor Telegramda eslatma oladi.' },
+  { Icon: LayoutDashboard, color: 'fi-purple',  iconColor: '#7c3aed', title: 'Admin mini panel',       desc: 'Bugungi qabullar, statistika, xizmatlarni boshqarish — barchasini Telegram ichidan.' },
+  { Icon: Star,            color: 'fi-green',   iconColor: '#059669', title: 'Baholash tizimi',        desc: 'Qabul tugagandan so\'ng bemor avtomatik baholashga chaqiriladi. Fikrlar saqlanadi.' },
+  { Icon: Stethoscope,     color: 'fi-teal',    iconColor: '#0d9488', title: 'Xizmatlar katalogi',     desc: 'Har bir xizmatga nom va narx qo\'ying. Kerak bo\'lmasa o\'chirib qo\'ying.' },
+  { Icon: CalendarDays,    color: 'fi-pink',    iconColor: '#db2777', title: 'Moslashuvchan jadval',   desc: 'Ish kunlari, soatlari, dam olish kunlari va maxsus sana bloklash — to\'liq nazorat.' },
 ]
 
 export default function Features() {
@@ -55,7 +55,9 @@ export default function Features() {
           {features.map((f, i) => (
             <Reveal key={i} delay={(i % 3) * 100}>
               <TiltCard>
-                <div className={`feature-icon ${f.color}`} dangerouslySetInnerHTML={{ __html: parseEmoji(f.icon) }} />
+                <div className={`feature-icon ${f.color}`}>
+                  <f.Icon size={24} color={f.iconColor} strokeWidth={1.75} />
+                </div>
                 <h3>{f.title}</h3>
                 <p>{f.desc}</p>
               </TiltCard>

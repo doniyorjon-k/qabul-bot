@@ -1,5 +1,5 @@
 import Reveal from './Reveal'
-import { parseEmoji } from '../utils/twemoji'
+import { XCircle, CheckCircle2 } from 'lucide-react'
 
 const before = [
   { icon: '×', text: 'Telefon qo\'ng\'iroqlari kunboyi to\'xtamaydi — resepsionist band' },
@@ -32,7 +32,10 @@ export default function Problem() {
         <div className="problem-grid">
           <Reveal>
             <div className="problem-card problem-before">
-              <h3 className="problem-card-title problem-title-red" dangerouslySetInnerHTML={{ __html: parseEmoji('❌ Hozirgi holat') }} />
+              <h3 className="problem-card-title problem-title-red">
+                <XCircle size={18} style={{ verticalAlign: '-3px', marginRight: '6px' }} />
+                Hozirgi holat
+              </h3>
               <ul className="problem-list">
                 {before.map((item, i) => (
                   <li key={i}>
@@ -46,7 +49,10 @@ export default function Problem() {
 
           <Reveal delay={150}>
             <div className="problem-card problem-after">
-              <h3 className="problem-card-title problem-title-green" dangerouslySetInnerHTML={{ __html: parseEmoji('✅ Qabulim boti bilan') }} />
+              <h3 className="problem-card-title problem-title-green">
+                <CheckCircle2 size={18} style={{ verticalAlign: '-3px', marginRight: '6px' }} />
+                Qabulim boti bilan
+              </h3>
               <ul className="problem-list">
                 {after.map((item, i) => (
                   <li key={i}>

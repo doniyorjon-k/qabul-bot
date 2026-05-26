@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
 import { useInView } from '../hooks/useInView'
 import { parseEmoji } from '../utils/twemoji'
+import { Bot } from 'lucide-react'
 
 function ChatMessage({ msg, dark }) {
   return (
@@ -55,7 +56,7 @@ export default function ChatMockup({ messages, dark = false, startOnView = false
   return (
     <div ref={wrapRef} className={`phone${dark ? ' phone-dark' : ''}`}>
       <div className={`phone-top${dark ? ' phone-top-dark' : ''}`}>
-        <div className="phone-avatar" dangerouslySetInnerHTML={{ __html: parseEmoji('🦷') }} />
+        <div className="phone-avatar"><Bot size={16} color="white" strokeWidth={1.75} /></div>
         <div className="phone-info">
           <div className={`phone-name${dark ? ' phone-name-dark' : ''}`}>{name}</div>
           <div className="phone-status">● Online</div>
