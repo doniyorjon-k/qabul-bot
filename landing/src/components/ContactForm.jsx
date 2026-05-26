@@ -17,8 +17,12 @@ export default function ContactForm() {
       await fetch(FORM_URL, {
         method: 'POST',
         mode: 'no-cors',
-        headers: { 'Content-Type': 'text/plain' },
-        body: JSON.stringify({ ...form, date: new Date().toLocaleString('uz-UZ') }),
+        body: new URLSearchParams({
+          name: form.name,
+          phone: form.phone,
+          clinic: form.clinic,
+          date: new Date().toLocaleString('uz-UZ'),
+        }),
       })
       setStatus('success')
     } catch {
