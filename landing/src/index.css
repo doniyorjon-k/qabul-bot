@@ -89,8 +89,8 @@ img { max-width: 100%; display: block; }
   box-shadow: 0 1px 0 var(--border);
 }
 .nav-inner { display: flex; align-items: center; justify-content: space-between; height: 64px; }
-.nav-logo { display: flex; align-items: center; overflow: hidden; width: 90px; height: 46px; }
-.nav-logo-img { height: 46px; width: auto; transform: scale(2.6); transform-origin: center; flex-shrink: 0; }
+.nav-logo { display: flex; align-items: center; overflow: hidden; width: 160px; height: 46px; }
+.nav-logo-img { height: 46px; width: auto; transform: scale(2.2); transform-origin: center; flex-shrink: 0; }
 .nav-links { display: flex; align-items: center; gap: 28px; }
 .nav-links a {
   font-size: 14px; font-weight: 500; color: var(--med); transition: color .2s;
