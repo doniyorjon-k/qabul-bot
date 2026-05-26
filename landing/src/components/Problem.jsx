@@ -2,19 +2,19 @@ import Reveal from './Reveal'
 import { XCircle, CheckCircle2 } from 'lucide-react'
 
 const before = [
-  { icon: '×', text: 'Telefon qo\'ng\'iroqlari kunboyi to\'xtamaydi — resepsionist band' },
+  { icon: '×', text: 'Telefon qo\'ng\'iroqlari kunboyi to\'xtamaydi — resepsionist doim band' },
   { icon: '×', text: 'Qo\'lda yozilgan daftar — tartibsiz, chalkash, yo\'qolib qoladi' },
   { icon: '×', text: 'Ish soatlaridan keyin qabul yo\'q — bemorlar raqobatga ketadi' },
-  { icon: '×', text: 'Bemor unutadi, kelmaydi — vaqt va pul yo\'qotiladi' },
-  { icon: '×', text: 'Statistika yo\'q — qancha qabul, qaysi xizmat — noma\'lum' },
+  { icon: '×', text: 'Bemor unutadi, kelmaydi — vaqt va pul behuda ketadi' },
+  { icon: '×', text: 'Statistika yo\'q — necha qabul, qaysi xizmat — hammasi noma\'lum' },
 ]
 
 const after = [
-  { icon: '✓', text: 'Bot o\'zi qabul qiladi — siz telefonda o\'tirishingiz shart emas' },
-  { icon: '✓', text: 'Hamma ma\'lumot Telegram da — tartibli, qulay, istalgan joydan' },
-  { icon: '✓', text: '24/7 ishlaydi — tunda ham, dam olish kunlari ham qabul oladi' },
+  { icon: '✓', text: 'Bot o\'zi qabul qiladi — siz telefon oldida o\'tirishingiz shart emas' },
+  { icon: '✓', text: 'Barcha ma\'lumot Telegramda — tartibli, qulay, istalgan joydan' },
+  { icon: '✓', text: '24/7 ishlaydi — tunda ham, dam olish kunlarida ham qabul oladi' },
   { icon: '✓', text: 'Eslatmalar avtomatik boradi — bemor unutmaydi, keladi' },
-  { icon: '✓', text: 'Admin panelda statistika — qabul, xizmat, baholash hammasi ko\'rinadi' },
+  { icon: '✓', text: 'Admin panelda statistika — qabullar, xizmatlar, baholash hammasi ko\'rinadi' },
 ]
 
 export default function Problem() {
