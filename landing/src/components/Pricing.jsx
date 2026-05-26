@@ -1,6 +1,6 @@
 import Reveal from './Reveal'
 
-const CONTACT = 'https://t.me/doniyorjon_k'
+const scrollToContact = (e) => { e.preventDefault(); document.getElementById('contact')?.scrollIntoView({ behavior: 'smooth' }) }
 
 const plans = [
   {
@@ -97,9 +97,8 @@ export default function Pricing() {
                   ))}
                 </ul>
                 <a
-                  href={CONTACT}
-                  target="_blank"
-                  rel="noreferrer"
+                  href="#contact"
+                  onClick={scrollToContact}
                   className={`btn ${plan.btnCls}`}
                   style={{ width: '100%', justifyContent: 'center' }}
                 >

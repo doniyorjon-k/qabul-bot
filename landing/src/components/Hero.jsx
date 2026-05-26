@@ -35,7 +35,11 @@ export default function Hero() {
               Siz faqat qabulga tayyorlanasiz.
             </p>
             <div className="hero-ctas">
-              <a href={CONTACT} target="_blank" rel="noreferrer" className="btn btn-primary btn-lg">
+              <a
+                href="#contact"
+                className="btn btn-primary btn-lg"
+                onClick={(e) => { e.preventDefault(); document.getElementById('contact')?.scrollIntoView({ behavior: 'smooth' }) }}
+              >
                 Bepul boshlash
               </a>
               <a

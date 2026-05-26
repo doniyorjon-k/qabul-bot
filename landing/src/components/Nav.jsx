@@ -38,7 +38,7 @@ export default function Nav() {
               </a>
             ))}
           </div>
-          <a href={CONTACT} target="_blank" rel="noreferrer" className="btn btn-primary">
+          <a href="#contact" className="btn btn-primary" onClick={(e) => handleAnchor(e, '#contact')}>
             Boshlash →
           </a>
         </div>

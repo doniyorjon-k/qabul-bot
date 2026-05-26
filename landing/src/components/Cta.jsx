@@ -15,7 +15,11 @@ export default function Cta() {
         </Reveal>
         <Reveal delay={200}>
           <div className="cta-btns">
-            <a href={CONTACT} target="_blank" rel="noreferrer" className="btn btn-white btn-lg">
+            <a
+              href="#contact"
+              className="btn btn-white btn-lg"
+              onClick={(e) => { e.preventDefault(); document.getElementById('contact')?.scrollIntoView({ behavior: 'smooth' }) }}
+            >
               Bepul boshlash
             </a>
             <a href={CONTACT} target="_blank" rel="noreferrer" className="btn btn-ghost btn-lg">
