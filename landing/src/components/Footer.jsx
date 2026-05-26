@@ -20,8 +20,7 @@ export default function Footer() {
       <div className="container">
         <div className="footer-inner">
           <div className="footer-logo">
-            <span className="footer-logo-icon">🦷</span>
-            QabulBot
+            <img src="/logo.png" alt="QabulBot" className="footer-logo-img" />
           </div>
           <div className="footer-links">
             {links.map((l) => (
