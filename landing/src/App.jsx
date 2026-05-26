@@ -1,4 +1,5 @@
 import ScrollProgress from './components/ScrollProgress'
+import ScrollToTop from './components/ScrollToTop'
 import Nav from './components/Nav'
 import Hero from './components/Hero'
 import Stats from './components/Stats'
@@ -32,6 +33,7 @@ export default function App() {
         <Cta />
       </main>
       <Footer />
+      <ScrollToTop />
     </>
   )
 }
