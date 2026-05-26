@@ -88,7 +88,10 @@ export default function DemoModal({ onClose }) {
               @{botUsername} <ExternalLink size={15} />
             </a>
             <p className="reg-note" style={{ marginTop: 16 }}>
-              14 kun bepul sinov. Savollar uchun @doniyorjon_k
+              14 kun bepul sinov. Savollar uchun{' '}
+              <a href="https://t.me/doniyorjon_k" target="_blank" rel="noreferrer" className="reg-guide-link">
+                @doniyorjon_k
+              </a>
             </p>
           </div>
         ) : (
