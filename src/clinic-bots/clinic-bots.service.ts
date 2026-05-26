@@ -109,12 +109,16 @@ export class ClinicBotsService implements OnModuleInit {
   }
 
   async stopBot(clinicId: number): Promise<void> {
+    await this.stopUserBot(clinicId);
+    await this.stopAdminBot(clinicId);
+  }
+
+  async stopUserBot(clinicId: number): Promise<void> {
     const bot = this.bots.get(clinicId);
     if (bot) {
       try { await bot.telegram.deleteWebhook(); bot.stop(); } catch {}
       this.bots.delete(clinicId);
     }
-    await this.stopAdminBot(clinicId);
   }
 
   async stopAdminBot(clinicId: number): Promise<void> {
@@ -126,15 +130,25 @@ export class ClinicBotsService implements OnModuleInit {
 
   async sendMessage(clinicId: number, chatId: number, text: string, extra?: any): Promise<void> {
     const bot = this.bots.get(clinicId) || this.adminBots.get(clinicId);
-    if (!bot) return;
+    if (!bot) {
+      this.logger.warn(`sendMessage: clinic ${clinicId} boti topilmadi`);
+      return;
+    }
     await bot.telegram.sendMessage(chatId, text, extra);
   }
 
   async sendToAdminsPreferAdminBot(clinic: { id: number; adminIds: number[] }, text: string, extra?: any): Promise<void> {
     const bot = this.adminBots.get(clinic.id) || this.bots.get(clinic.id);
-    if (!bot) return;
+    if (!bot) {
+      this.logger.warn(`sendToAdminsPreferAdminBot: clinic ${clinic.id} boti topilmadi — xabar yuborilmadi`);
+      return;
+    }
     for (const adminId of clinic.adminIds) {
-      try { await bot.telegram.sendMessage(adminId, text, extra); } catch {}
+      try {
+        await bot.telegram.sendMessage(adminId, text, extra);
+      } catch (err) {
+        this.logger.error(`sendToAdminsPreferAdminBot: clinic ${clinic.id} admin ${adminId} ga xabar yuborishda xato: ${err.message}`);
+      }
     }
   }
 

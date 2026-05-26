@@ -157,8 +157,8 @@ export class NotificationsService {
             { parse_mode: 'Markdown', ...expiredKb },
           );
           await this.clinicsService.update(clinic.id, { status: ClinicStatus.EXPIRED });
-          await this.clinicBotsService.stopBot(clinic.id);
-          this.logger.log(`Clinic ${clinic.id} EXPIRED and bot stopped`);
+          await this.clinicBotsService.stopUserBot(clinic.id);
+          this.logger.log(`Clinic ${clinic.id} EXPIRED — user bot to'xtatildi, admin bot ishlaydi`);
           await this.superAdminBotService.notify(
             `🚨 *Klinika tugadi!*\n\n🏥 ${clinic.name} (ID: ${clinic.id})\n\nObuna to'lanmadi — bot to'xtatildi.`,
             { parse_mode: 'Markdown' },
@@ -200,7 +200,9 @@ export class NotificationsService {
     for (const adminId of clinic.adminIds) {
       try {
         await this.clinicBotsService.sendMessage(clinic.id, adminId, text, { parse_mode: 'Markdown', ...extra });
-      } catch {}
+      } catch (err) {
+        this.logger.error(`notifyClinicAdmins: clinic ${clinic.id} admin ${adminId} ga xabar yuborishda xato: ${err.message}`);
+      }
     }
   }
 
