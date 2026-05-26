@@ -426,6 +426,34 @@ img { max-width: 100%; display: block; }
 .faq-a { max-height: 0; overflow: hidden; transition: max-height .3s ease; }
 .faq-a p { padding: 0 24px 20px; font-size: 14.5px; color: var(--muted); line-height: 1.7; }
 
+/* ── MODAL ── */
+.modal-overlay {
+  position: fixed; inset: 0; z-index: 1000;
+  background: rgba(0,0,0,.5); backdrop-filter: blur(4px);
+  display: flex; align-items: center; justify-content: center;
+  padding: 20px;
+  animation: fadeIn .2s ease;
+}
+.modal-card {
+  background: #fff; border-radius: var(--r-lg); padding: 36px;
+  width: 100%; max-width: 460px; position: relative;
+  box-shadow: 0 24px 64px rgba(0,0,0,.2);
+  animation: slideUp .25s ease;
+}
+.modal-close {
+  position: absolute; top: 16px; right: 16px;
+  width: 32px; height: 32px; border-radius: 50%;
+  background: var(--bg2); border: none; cursor: pointer;
+  font-size: 20px; line-height: 1; color: var(--muted);
+  display: flex; align-items: center; justify-content: center;
+  transition: background .15s;
+}
+.modal-close:hover { background: var(--border); }
+.modal-title { font-size: 20px; font-weight: 800; color: var(--dark); margin-bottom: 6px; }
+.modal-sub { font-size: 14px; color: var(--muted); margin-bottom: 24px; }
+@keyframes fadeIn { from { opacity: 0 } to { opacity: 1 } }
+@keyframes slideUp { from { opacity: 0; transform: translateY(20px) } to { opacity: 1; transform: translateY(0) } }
+
 /* ── CONTACT FORM ── */
 .cf-card { background: #fff; border: 1px solid var(--border); border-radius: var(--r-lg); padding: 40px; max-width: 520px; margin: 48px auto 0; box-shadow: var(--sh); }
 .cf-form { display: flex; flex-direction: column; gap: 20px; }

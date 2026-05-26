@@ -1,6 +1,6 @@
+import { useState } from 'react'
 import ChatMockup from './ChatMockup'
-
-const CONTACT = 'https://t.me/doniyorjon_k'
+import DemoModal from './DemoModal'
 
 const heroMessages = [
   { side: 'bot', text: 'Salom! 👋 Qaysi xizmatni tanlaysiz?', btns: ['🦷 Tish tekshiruvi', '✨ Oqlash', '🔧 Plomba'], delay: 500 },
@@ -13,6 +13,8 @@ const heroMessages = [
 ]
 
 export default function Hero() {
+  const [modalOpen, setModalOpen] = useState(false)
+
   return (
     <section id="hero" className="hero">
       <div className="hero-blob hero-blob-1" />
@@ -42,16 +44,9 @@ export default function Hero() {
               >
                 Bepul boshlash
               </a>
-              <a
-                href="#demo"
-                className="btn btn-outline btn-lg"
-                onClick={(e) => {
-                  e.preventDefault()
-                  document.getElementById('demo')?.scrollIntoView({ behavior: 'smooth' })
-                }}
-              >
+              <button className="btn btn-outline btn-lg" onClick={() => setModalOpen(true)}>
                 Demo ko'rish
-              </a>
+              </button>
             </div>
             <div className="hero-trust">
               <span className="hero-stars">★★★★★</span>
@@ -65,6 +60,7 @@ export default function Hero() {
           </div>
         </div>
       </div>
+      {modalOpen && <DemoModal onClose={() => setModalOpen(false)} />}
     </section>
   )
 }
