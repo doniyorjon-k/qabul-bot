@@ -8,6 +8,7 @@ import Features from './components/Features'
 import Demo from './components/Demo'
 import Reminders from './components/Reminders'
 import Pricing from './components/Pricing'
+import ContactForm from './components/ContactForm'
 import Faq from './components/Faq'
 import Cta from './components/Cta'
 import Footer from './components/Footer'
@@ -26,6 +27,7 @@ export default function App() {
         <Demo />
         <Reminders />
         <Pricing />
+        <ContactForm />
         <Faq />
         <Cta />
       </main>

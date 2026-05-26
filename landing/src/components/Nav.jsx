@@ -6,7 +6,7 @@ const links = [
   { href: '#how', label: 'Qanday ishlaydi' },
   { href: '#features', label: 'Imkoniyatlar' },
   { href: '#pricing', label: 'Narxlar' },
-  { href: '#faq', label: 'Savol-javob' },
+  { href: '#contact', label: 'Boshlash' },
 ]
 
 export default function Nav() {
