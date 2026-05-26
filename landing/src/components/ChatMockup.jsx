@@ -1,21 +1,25 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
 import { useInView } from '../hooks/useInView'
+import { parseEmoji } from '../utils/twemoji'
 
 function ChatMessage({ msg, dark }) {
   return (
     <div className={`msg msg-${msg.side}`} style={{ animation: 'msgIn .35s ease forwards' }}>
-      <div className={`msg-bubble${dark && msg.side === 'bot' ? ' msg-bubble-dark' : ''}`}>
-        {msg.text.split('\n').map((line, i) => (
-          <span key={i}>{line}{i < msg.text.split('\n').length - 1 && <br />}</span>
-        ))}
-      </div>
+      <div
+        className={`msg-bubble${dark && msg.side === 'bot' ? ' msg-bubble-dark' : ''}`}
+        dangerouslySetInnerHTML={{ __html: parseEmoji(msg.text.replace(/\n/g, '<br/>')) }}
+      />
       <div className={`msg-time${msg.side === 'user' ? ' msg-time-user' : ''}`}>
         {new Date().getHours()}:{String(new Date().getMinutes()).padStart(2, '0')}
       </div>
       {msg.btns && (
         <div className="kb-btns">
           {msg.btns.map((b) => (
-            <button key={b} className={`kb-btn${dark ? ' kb-btn-dark' : ''}`}>{b}</button>
+            <button
+              key={b}
+              className={`kb-btn${dark ? ' kb-btn-dark' : ''}`}
+              dangerouslySetInnerHTML={{ __html: parseEmoji(b) }}
+            />
           ))}
         </div>
       )}
@@ -51,7 +55,7 @@ export default function ChatMockup({ messages, dark = false, startOnView = false
   return (
     <div ref={wrapRef} className={`phone${dark ? ' phone-dark' : ''}`}>
       <div className={`phone-top${dark ? ' phone-top-dark' : ''}`}>
-        <div className="phone-avatar">🦷</div>
+        <div className="phone-avatar" dangerouslySetInnerHTML={{ __html: parseEmoji('🦷') }} />
         <div className="phone-info">
           <div className={`phone-name${dark ? ' phone-name-dark' : ''}`}>{name}</div>
           <div className="phone-status">● Online</div>

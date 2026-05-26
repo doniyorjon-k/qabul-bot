@@ -426,6 +426,9 @@ img { max-width: 100%; display: block; }
 .faq-a { max-height: 0; overflow: hidden; transition: max-height .3s ease; }
 .faq-a p { padding: 0 24px 20px; font-size: 14.5px; color: var(--muted); line-height: 1.7; }
 
+/* ── TWEMOJI ── */
+.twemoji { width: 1.15em; height: 1.15em; vertical-align: -0.2em; display: inline; }
+
 /* ── MODAL ── */
 .modal-overlay {
   position: fixed; inset: 0; z-index: 1000;

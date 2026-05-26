@@ -1,4 +1,5 @@
 import Reveal from './Reveal'
+import { parseEmoji, parseTextWithBold } from '../utils/twemoji'
 
 const timeline = [
   { icon: '📅', cls: 'd1', badge: 'Qabul belgilanganda', badgeCls: 'rb-blue',   title: 'Tasdiqlash xabari',    desc: 'Bemor qabul qilganda darhol tasdiqlovchi xabar keladi — sana, vaqt va xizmat ko\'rsatiladi.' },
@@ -26,17 +27,6 @@ const cards = [
   },
 ]
 
-function RenderText({ text }) {
-  return text.split('\n').map((line, i) => {
-    const parts = line.split(/\*\*(.*?)\*\*/)
-    return (
-      <span key={i}>
-        {parts.map((p, j) => j % 2 === 1 ? <strong key={j}>{p}</strong> : p)}
-        {i < text.split('\n').length - 1 && <br />}
-      </span>
-    )
-  })
-}
 
 export default function Reminders() {
   return (
@@ -53,7 +43,7 @@ export default function Reminders() {
               {timeline.map((item, i) => (
                 <Reveal key={i} delay={i * 100}>
                   <div className="reminder-item">
-                    <div className={`reminder-dot ${item.cls}`}>{item.icon}</div>
+                    <div className={`reminder-dot ${item.cls}`} dangerouslySetInnerHTML={{ __html: parseEmoji(item.icon) }} />
                     <div className="reminder-content">
                       <span className={`reminder-badge ${item.badgeCls}`}>{item.badge}</span>
                       <h4>{item.title}</h4>
@@ -70,12 +60,10 @@ export default function Reminders() {
               <Reveal key={i} delay={i * 80}>
                 <div className="reminder-msg-card">
                   <div className="rmc-top">
-                    <span className="rmc-icon">{card.icon}</span>
+                    <span className="rmc-icon" dangerouslySetInnerHTML={{ __html: parseEmoji(card.icon) }} />
                     <span className="rmc-label">{card.label}</span>
                   </div>
-                  <div className="rmc-text">
-                    <RenderText text={card.text} />
-                  </div>
+                  <div className="rmc-text" dangerouslySetInnerHTML={{ __html: parseTextWithBold(card.text) }} />
                 </div>
               </Reveal>
             ))}

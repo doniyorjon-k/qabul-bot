@@ -1,4 +1,5 @@
 import Reveal from './Reveal'
+import { parseEmoji } from '../utils/twemoji'
 
 const before = [
   { icon: '×', text: 'Telefon qo\'ng\'iroqlari kunboyi to\'xtamaydi — resepsionist band' },
@@ -31,7 +32,7 @@ export default function Problem() {
         <div className="problem-grid">
           <Reveal>
             <div className="problem-card problem-before">
-              <h3 className="problem-card-title problem-title-red">❌ Hozirgi holat</h3>
+              <h3 className="problem-card-title problem-title-red" dangerouslySetInnerHTML={{ __html: parseEmoji('❌ Hozirgi holat') }} />
               <ul className="problem-list">
                 {before.map((item, i) => (
                   <li key={i}>
@@ -45,7 +46,7 @@ export default function Problem() {
 
           <Reveal delay={150}>
             <div className="problem-card problem-after">
-              <h3 className="problem-card-title problem-title-green">✅ Qabulim boti bilan</h3>
+              <h3 className="problem-card-title problem-title-green" dangerouslySetInnerHTML={{ __html: parseEmoji('✅ Qabulim boti bilan') }} />
               <ul className="problem-list">
                 {after.map((item, i) => (
                   <li key={i}>

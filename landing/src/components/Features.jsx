@@ -1,5 +1,6 @@
 import { useRef } from 'react'
 import Reveal from './Reveal'
+import { parseEmoji } from '../utils/twemoji'
 
 function TiltCard({ children }) {
   const ref = useRef(null)
@@ -54,7 +55,7 @@ export default function Features() {
           {features.map((f, i) => (
             <Reveal key={i} delay={(i % 3) * 100}>
               <TiltCard>
-                <div className={`feature-icon ${f.color}`}>{f.icon}</div>
+                <div className={`feature-icon ${f.color}`} dangerouslySetInnerHTML={{ __html: parseEmoji(f.icon) }} />
                 <h3>{f.title}</h3>
                 <p>{f.desc}</p>
               </TiltCard>
