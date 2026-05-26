@@ -486,6 +486,13 @@ img { max-width: 100%; display: block; }
 .reg-guide-link:hover { text-decoration: underline; }
 .cf-optional { font-weight: 400; color: var(--muted); font-size: 12px; }
 .cf-hint { font-size: 11.5px; color: var(--hint); margin-top: 2px; }
+.cf-admin-hint {
+  display: flex; gap: 8px; align-items: flex-start;
+  background: #fffbeb; border: 1px solid #fde68a; border-radius: 8px;
+  padding: 10px 12px; margin-top: 4px;
+  font-size: 12.5px; color: var(--med); line-height: 1.55;
+}
+.cf-admin-hint-icon { font-size: 14px; flex-shrink: 0; margin-top: 1px; }
 .reg-note { font-size: 13px; color: var(--muted); }
 
 /* ── CONTACT FORM ── */

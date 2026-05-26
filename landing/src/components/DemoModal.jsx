@@ -162,15 +162,21 @@ export default function DemoModal({ onClose }) {
                   </div>
                   <div className="cf-group">
                     <label className="cf-label">
-                      Telegram ID <span className="cf-optional">(ixtiyoriy)</span>
+                      Sizning Telegram ID <span className="cf-optional">(ixtiyoriy)</span>
                     </label>
                     <input className="cf-input" type="number"
                       placeholder="123456789"
                       value={form.adminTelegramId} onChange={set('adminTelegramId')}
                       disabled={status === 'loading'} />
-                    <span className="cf-hint">
-                      @userinfobot ga /start yuboring — raqam ko'rinadi
-                    </span>
+                    <div className="cf-admin-hint">
+                      <span className="cf-admin-hint-icon">💡</span>
+                      <span>
+                        Botingizda <strong>/admin</strong> buyrug'ini yozganda admin paneli ochiladi —
+                        buning uchun tizim sizni admin sifatida tanishi kerak.
+                        ID ni bilmasangiz: <a href="https://t.me/userinfobot" target="_blank" rel="noreferrer" className="reg-guide-link">@userinfobot</a> ga{' '}
+                        <strong>/start</strong> yuboring, u raqamni ko'rsatadi.
+                      </span>
+                    </div>
                   </div>
 
                   {status === 'error' && (
