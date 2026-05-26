@@ -36,7 +36,7 @@ export default function Hero() {
             </p>
             <div className="hero-ctas">
               <a href={CONTACT} target="_blank" rel="noreferrer" className="btn btn-primary btn-lg">
-                🚀 Bepul boshlash
+                Bepul boshlash
               </a>
               <a
                 href="#demo"

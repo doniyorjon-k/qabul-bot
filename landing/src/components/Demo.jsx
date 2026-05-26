@@ -23,7 +23,7 @@ export default function Demo() {
       <div className="container" style={{ position: 'relative', zIndex: 1 }}>
         <div className="demo-inner">
           <Reveal>
-            <div className="demo-tag">💬 Qabul jarayoni</div>
+            <div className="demo-tag">Qabul jarayoni</div>
             <h2 className="demo-title">Bemor uchun<br />juda sodda</h2>
             <p className="demo-sub">Telefon qilish shart emas. Kutish yo'q. Faqat bot bilan 2 daqiqalik suhbat.</p>
             <ul className="demo-list">

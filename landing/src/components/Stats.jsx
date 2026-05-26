@@ -23,9 +23,9 @@ function Counter({ target, suffix = '' }) {
 }
 
 const items = [
-  { target: 24, suffix: '/7', label: "⏰ Soat ishlaydi — to'xtovsiz" },
-  { target: 3, suffix: '', label: '🔔 Bosqichda eslatma boradi' },
-  { target: 5, suffix: '', label: '⚡ Daqiqada bot sozlanadi' },
+  { target: 24, suffix: '/7', label: "Soat ishlaydi — to'xtovsiz" },
+  { target: 3, suffix: '', label: 'Bosqichda eslatma boradi' },
+  { target: 5, suffix: '', label: 'Daqiqada bot sozlanadi' },
 ]
 
 export default function Stats() {

@@ -31,7 +31,7 @@ export default function Faq() {
     <section id="faq" className="section">
       <div className="container">
         <Reveal style={{ textAlign: 'center', maxWidth: 600, margin: '0 auto' }}>
-          <div className="tag">❓ Savol-javob</div>
+          <div className="tag">Savol-javob</div>
           <h2 className="section-title">Ko'p so'raladigan savollar</h2>
         </Reveal>
 

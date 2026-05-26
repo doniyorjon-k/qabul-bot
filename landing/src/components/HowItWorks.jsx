@@ -23,7 +23,7 @@ export default function HowItWorks() {
     <section id="how" className="section section-bg">
       <div className="container">
         <Reveal style={{ textAlign: 'center', maxWidth: 600, margin: '0 auto' }}>
-          <div className="tag">🚀 Qanday ishlaydi</div>
+          <div className="tag">Qanday ishlaydi</div>
           <h2 className="section-title">3 bosqichda ishga tushadi</h2>
           <p className="section-sub" style={{ margin: '14px auto 0' }}>
             Texnik bilim kerak emas. Faqat Telegram bo'lsa yetarli.

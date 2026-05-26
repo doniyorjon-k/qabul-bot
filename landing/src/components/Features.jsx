@@ -46,7 +46,7 @@ export default function Features() {
     <section id="features" className="section">
       <div className="container">
         <Reveal style={{ textAlign: 'center', maxWidth: 600, margin: '0 auto' }}>
-          <div className="tag">⚡ Imkoniyatlar</div>
+          <div className="tag">Imkoniyatlar</div>
           <h2 className="section-title">Klinikangizga kerak bo'lgan hamma narsa</h2>
         </Reveal>
 

@@ -4,7 +4,7 @@ const CONTACT = 'https://t.me/doniyorjon_k'
 
 const plans = [
   {
-    name: '🆓 Sinov davri',
+    name: 'Sinov davri',
     price: 'Bepul',
     period: '14 kun to\'liq imkoniyat',
     features: [
@@ -19,7 +19,7 @@ const plans = [
     featured: false,
   },
   {
-    name: '📅 Oylik',
+    name: 'Oylik',
     price: '99,000',
     currency: 'so\'m',
     period: 'oyiga / 1 klinika',
@@ -37,7 +37,7 @@ const plans = [
     badge: 'Eng mashhur',
   },
   {
-    name: '📆 Yillik',
+    name: 'Yillik',
     price: '799,000',
     currency: 'so\'m',
     period: 'yiliga',
@@ -60,7 +60,7 @@ export default function Pricing() {
     <section id="pricing" className="section section-bg">
       <div className="container">
         <Reveal style={{ textAlign: 'center', maxWidth: 600, margin: '0 auto' }}>
-          <div className="tag">💎 Narxlar</div>
+          <div className="tag">Narxlar</div>
           <h2 className="section-title">Sodda va shaffof narxlar</h2>
           <p className="section-sub" style={{ margin: '14px auto 0' }}>
             Xavfsiz boshlang — 14 kun bepul, karta ma'lumoti shart emas.

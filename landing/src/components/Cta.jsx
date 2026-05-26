@@ -16,10 +16,10 @@ export default function Cta() {
         <Reveal delay={200}>
           <div className="cta-btns">
             <a href={CONTACT} target="_blank" rel="noreferrer" className="btn btn-white btn-lg">
-              🚀 Bepul boshlash
+              Bepul boshlash
             </a>
             <a href={CONTACT} target="_blank" rel="noreferrer" className="btn btn-ghost btn-lg">
-              💬 Savol berish
+              Savol berish
             </a>
           </div>
         </Reveal>

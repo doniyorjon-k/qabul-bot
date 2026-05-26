@@ -44,7 +44,7 @@ export default function Reminders() {
       <div className="container">
         <div className="reminders-inner">
           <Reveal>
-            <div className="tag">🔔 Eslatmalar tizimi</div>
+            <div className="tag">Eslatmalar tizimi</div>
             <h2 className="section-title">Bemor hech qachon<br />unutmaydi</h2>
             <p className="section-sub">
               Qabul belgilangandan tasdiqlangungacha va qabul kunigacha — bot o'zi kuzatib boradi.
