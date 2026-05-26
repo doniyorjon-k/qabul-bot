@@ -1,12 +1,11 @@
 import Reveal from './Reveal'
-import { CalendarCheck, Clock, Zap, Timer, CheckCircle2, AlarmClock, Bell } from 'lucide-react'
+import { CalendarCheck, Clock, Zap, CheckCircle2, AlarmClock, Bell } from 'lucide-react'
 import { parseTextWithBold } from '../utils/twemoji'
 
 const timeline = [
   { Icon: CalendarCheck, iconColor: '#2563eb', cls: 'd1', badge: 'Qabul belgilanganda', badgeCls: 'rb-blue',   title: 'Tasdiqlash xabari',      desc: 'Bemor qabul qilganda darhol tasdiqlovchi xabar keladi — sana, vaqt va xizmat ko\'rsatiladi.' },
   { Icon: Clock,         iconColor: '#ea580c', cls: 'd2', badge: '1 kun oldin',         badgeCls: 'rb-orange', title: 'Ertangi qabul eslatmasi', desc: 'Kechqurun ertangi qabulini eslatadi. Bemor tayyorlanadi.' },
   { Icon: Zap,           iconColor: '#059669', cls: 'd3', badge: '2 soat oldin',        badgeCls: 'rb-green',  title: 'Qabul yaqinlashdi',      desc: 'Klinikaga yo\'lga chiqish vaqtini eslatadi.' },
-  { Icon: Timer,         iconColor: '#7c3aed', cls: 'd4', badge: '10 daqiqa oldin',     badgeCls: 'rb-purple', title: 'Deyarli vaqt bo\'ldi',   desc: '"Kechikib qolmang!" — oxirgi eslatma. Kelishini ta\'minlaydi.' },
 ]
 
 const cards = [
@@ -21,10 +20,6 @@ const cards = [
   {
     Icon: Bell, iconColor: '#2563eb', label: '2 soat oldin',
     text: '🔔 **2 soatdan keyin qabulingiz!**\n\n⏰ 10:00 — Tish tekshiruvi\n\nKechikib qolmang 😊',
-  },
-  {
-    Icon: Timer, iconColor: '#7c3aed', label: '10 daqiqa oldin',
-    text: '⏰ **10 daqiqadan keyin qabulingiz!**\n\n🦷 Tish tekshiruvi\n⏰ Soat: 10:00\n\nKechikib qolmang! 🏃',
   },
 ]
 
