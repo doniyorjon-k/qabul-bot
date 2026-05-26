@@ -45,7 +45,7 @@ export default function Problem() {
 
           <Reveal delay={150}>
             <div className="problem-card problem-after">
-              <h3 className="problem-card-title problem-title-green">✅ QabulBot bilan</h3>
+              <h3 className="problem-card-title problem-title-green">✅ Qabulim boti bilan</h3>
               <ul className="problem-list">
                 {after.map((item, i) => (
                   <li key={i}>

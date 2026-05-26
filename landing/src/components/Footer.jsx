@@ -20,7 +20,7 @@ export default function Footer() {
       <div className="container">
         <div className="footer-inner">
           <div className="footer-logo">
-            <img src="/logo.png" alt="QabulBot" className="footer-logo-img" />
+            <img src="/logo.png" alt="Qabulim" className="footer-logo-img" />
           </div>
           <div className="footer-links">
             {links.map((l) => (
@@ -35,7 +35,7 @@ export default function Footer() {
               </a>
             ))}
           </div>
-          <div className="footer-copy">© 2025 QabulBot</div>
+          <div className="footer-copy">© 2025 Qabulim</div>
         </div>
       </div>
     </footer>
