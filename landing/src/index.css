@@ -457,6 +457,37 @@ img { max-width: 100%; display: block; }
 @keyframes fadeIn { from { opacity: 0 } to { opacity: 1 } }
 @keyframes slideUp { from { opacity: 0; transform: translateY(20px) } to { opacity: 1; transform: translateY(0) } }
 
+/* ── REGISTRATION MODAL ── */
+.reg-card { max-width: 500px !important; }
+.reg-steps {
+  display: flex; align-items: center; justify-content: center; gap: 0; margin-bottom: 28px;
+}
+.reg-step-dot {
+  width: 28px; height: 28px; border-radius: 50%;
+  background: var(--border); color: var(--muted);
+  font-size: 13px; font-weight: 700;
+  display: flex; align-items: center; justify-content: center;
+  transition: background .25s, color .25s;
+}
+.reg-step-dot.active { background: var(--blue); color: #fff; }
+.reg-step-line { flex: 1; height: 2px; background: var(--border); max-width: 60px; transition: background .25s; }
+.reg-step-line.active { background: var(--blue); }
+.reg-guide {
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: var(--r); padding: 14px 16px; margin-bottom: 20px;
+}
+.reg-guide-title { font-size: 12.5px; font-weight: 700; color: var(--dark); margin-bottom: 8px; }
+.reg-guide-list { padding-left: 18px; margin: 0 0 10px; display: flex; flex-direction: column; gap: 4px; }
+.reg-guide-list li { font-size: 12.5px; color: var(--med); }
+.reg-guide-link {
+  font-size: 12.5px; color: var(--blue); font-weight: 600;
+  display: inline-flex; align-items: center; gap: 4px; text-decoration: none;
+}
+.reg-guide-link:hover { text-decoration: underline; }
+.cf-optional { font-weight: 400; color: var(--muted); font-size: 12px; }
+.cf-hint { font-size: 11.5px; color: var(--hint); margin-top: 2px; }
+.reg-note { font-size: 13px; color: var(--muted); }
+
 /* ── CONTACT FORM ── */
 .cf-card { background: #fff; border: 1px solid var(--border); border-radius: var(--r-lg); padding: 40px; max-width: 520px; margin: 48px auto 0; box-shadow: var(--sh); }
 .cf-form { display: flex; flex-direction: column; gap: 20px; }
