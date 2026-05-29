@@ -41,7 +41,7 @@ export class ClinicBotsService implements OnModuleInit {
   ) {}
 
   async onModuleInit() {
-    const clinics = await this.clinicsService.findActive();
+    const clinics = await this.clinicsService.findForBotStart();
     for (const clinic of clinics) {
       await this.startBot(clinic);
       if (clinic.adminBotToken) await this.startAdminBot(clinic);

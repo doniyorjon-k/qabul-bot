@@ -8,11 +8,12 @@ import { WorkScheduleModule } from '../work-schedule/work-schedule.module';
 import { ClinicSettingsModule } from '../clinic-settings/clinic-settings.module';
 import { ClinicsModule } from '../clinics/clinics.module';
 import { ClinicBotsModule } from '../clinic-bots/clinic-bots.module';
+import { PlansModule } from '../plans/plans.module';
 
 @Module({
   imports: [
     AppointmentsModule, TimeSlotsModule, UsersModule, ReviewsModule,
-    WorkScheduleModule, ClinicSettingsModule, ClinicsModule, ClinicBotsModule,
+    WorkScheduleModule, ClinicSettingsModule, ClinicsModule, ClinicBotsModule, PlansModule,
   ],
   controllers: [AdminApiController],
 })

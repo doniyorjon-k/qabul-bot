@@ -11,6 +11,7 @@ import { WorkScheduleService } from '../work-schedule/work-schedule.service';
 import { ClinicSettingsService } from '../clinic-settings/clinic-settings.service';
 import { ClinicsService } from '../clinics/clinics.service';
 import { ClinicBotsService } from '../clinic-bots/clinic-bots.service';
+import { PlansService } from '../plans/plans.service';
 
 @Controller('api/admin')
 export class AdminApiController {
@@ -23,6 +24,7 @@ export class AdminApiController {
     private readonly clinicSettingsService: ClinicSettingsService,
     private readonly clinicsService: ClinicsService,
     private readonly clinicBotsService: ClinicBotsService,
+    private readonly plansService: PlansService,
   ) {}
 
   private async validateAdmin(initData: string, clinicIdHeader: string): Promise<number> {
@@ -216,5 +218,18 @@ export class AdminApiController {
     const { name, address, phone, telegram, mapsUrl, tgUrl, igUrl } = body;
     await this.clinicSettingsService.update(clinicId, { name, address, phone, telegram, mapsUrl, tgUrl, igUrl });
     return { ok: true };
+  }
+
+  @Get('subscription')
+  async getSubscription(
+    @Headers('x-init-data') initData: string,
+    @Headers('x-clinic-id') clinicIdHeader: string,
+  ) {
+    const clinicId = await this.validateAdmin(initData, clinicIdHeader);
+    const clinic = await this.clinicsService.findById(clinicId);
+    const plans = await this.plansService.findAll();
+    const endsAt = clinic.subscriptionEndsAt ?? clinic.trialEndsAt;
+    const daysLeft = endsAt ? Math.ceil((endsAt.getTime() - Date.now()) / 86400000) : null;
+    return { status: clinic.status, endsAt, daysLeft, plans };
   }
 }

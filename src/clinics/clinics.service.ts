@@ -122,6 +122,16 @@ export class ClinicsService implements OnModuleInit {
     });
   }
 
+  async findForBotStart(): Promise<Clinic[]> {
+    return this.repo.find({
+      where: [
+        { status: ClinicStatus.TRIAL },
+        { status: ClinicStatus.ACTIVE },
+        { status: ClinicStatus.EXPIRED },
+      ],
+    });
+  }
+
   async update(id: number, data: Partial<Clinic>): Promise<void> {
     await this.repo.update(id, data);
   }

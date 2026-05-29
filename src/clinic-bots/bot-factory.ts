@@ -539,6 +539,11 @@ export function setupBotHandlers(
   // ── /admin buyrug'i ───────────────────────────────────────────────
   bot.command('admin', async (ctx) => {
     if (!isAdmin(ctx.from.id)) { await ctx.reply('⛔ Sizda admin huquqi yo\'q.'); return; }
+    const current = await services.clinicsService.findById(clinicId);
+    if (current?.status === ClinicStatus.EXPIRED || current?.status === ClinicStatus.SUSPENDED) {
+      await showExpiredPayment(ctx, services, clinicId);
+      return;
+    }
     await ctx.reply('👨‍⚕️ *Admin panel*', { parse_mode: 'Markdown', ...adminMainKb(miniAppUrl) });
   });
 
@@ -547,6 +552,23 @@ export function setupBotHandlers(
     if (!isAdmin(ctx.from.id)) return;
     delASess(ctx.from.id);
     await ctx.editMessageText('👨‍⚕️ *Admin panel*', { parse_mode: 'Markdown', ...adminMainKb(miniAppUrl) });
+  });
+
+  bot.action('adm:subscription', async (ctx) => {
+    await ctx.answerCbQuery();
+    if (!isAdmin(ctx.from.id)) return;
+    const current = await services.clinicsService.findById(clinicId);
+    const plans = await services.plansService.findAll();
+    const subInfo = buildSubscriptionInfo(current);
+    const planBtns: any[][] = plans.map(p => [
+      Markup.button.callback(`${p.name} — ${p.price.toLocaleString()} so'm (${p.durationDays} kun)`, `pay:plan:${p.id}`),
+    ]);
+    planBtns.push([Markup.button.url('📞 Adminga murojaat', 'https://t.me/doniyorjon_k')]);
+    planBtns.push([Markup.button.callback('⬅️ Orqaga', 'adm:back')]);
+    await ctx.editMessageText(
+      `💳 *Obuna holati*\n\n${subInfo}\n\nTarifni yangilash uchun birini tanlang:`,
+      { parse_mode: 'Markdown', ...Markup.inlineKeyboard(planBtns) },
+    );
   });
 
   // ── /paid command ─────────────────────────────────────────────────
@@ -1546,6 +1568,7 @@ function adminMainKb(miniAppUrl?: string) {
     [Markup.button.callback('📊 Statistika', 'adm:stats'), Markup.button.callback('💬 Mijozlar fikri', 'adm:reviews')],
     [Markup.button.callback('⏰ Ish vaqtini sozla', 'adm:schedule'), Markup.button.callback('⚙️ Sozlamalar', 'adm:settings')],
     [Markup.button.callback('📢 Foydalanuvchilarga xabar yuborish', 'adm:broadcast')],
+    [Markup.button.callback('💳 Obuna', 'adm:subscription')],
   );
   return Markup.inlineKeyboard(rows);
 }
@@ -1652,6 +1675,26 @@ function fmtDate(dateStr: string): string {
   if (!dateStr) return '';
   const [y, m, d] = dateStr.split('-');
   return `${d}.${m}.${y}`;
+}
+
+async function showExpiredPayment(ctx: any, services: BotServices, clinicId: number) {
+  const plans = await services.plansService.findAll();
+  const rows: any[][] = plans.map(p => [
+    Markup.button.callback(`${p.name} — ${p.price.toLocaleString()} so'm (${p.durationDays} kun)`, `pay:plan:${p.id}`),
+  ]);
+  rows.push([Markup.button.url('📞 Adminga murojaat', 'https://t.me/doniyorjon_k')]);
+  const kb = Markup.inlineKeyboard(rows);
+  const msg = `🔴 *Botingiz to'xtatildi!*\n\nObuna muddati tugadi\\. Botingizni qayta faollashtirish uchun quyidagi tariflardan birini tanlang:`;
+  if (ctx.callbackQuery) {
+    await ctx.editMessageText(msg, { parse_mode: 'Markdown', ...kb }).catch(() =>
+      ctx.reply(msg, { parse_mode: 'Markdown', ...kb }),
+    );
+  } else {
+    await ctx.reply(
+      `🔴 *Botingiz to'xtatildi!*\n\nObuna muddati tugadi. Botingizni qayta faollashtirish uchun quyidagi tariflardan birini tanlang:`,
+      { parse_mode: 'Markdown', ...kb },
+    );
+  }
 }
 
 function buildSubscriptionInfo(clinic: Clinic | null): string {
