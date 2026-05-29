@@ -116,7 +116,7 @@
     <svg viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><path d="M9 12h6M9 16h4"/></svg>Qabullar
   </button>
   <button class="tab" id="tab-revenue" onclick="switchTab('revenue')">
-    <svg viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>Daromad
+    <svg viewBox="0 0 24 24"><path d="M18 20V10M12 20V4M6 20v-6"/></svg>Tahlil
   </button>
   <button class="tab" id="tab-reviews" onclick="switchTab('reviews')">
     <svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>Fikrlar
@@ -324,19 +324,35 @@ async function loadRevenue() {
   const el = document.getElementById('revenue-content');
   el.innerHTML = '<div class="spin"></div>';
   try {
-    const [r, s] = await Promise.all([api('/revenue'), api('/stats')]);
-    const svcRows = (r.byService||[]).map(s=>`
+    [_revData, _statsData] = await Promise.all([api('/revenue'), api('/stats')]);
+    _renderAnalytics();
+  } catch(e) { el.innerHTML = `<p style="color:var(--red);text-align:center;margin-top:48px;font-size:13px">${e.message}</p>`; }
+}
+
+function setAnalyticsTab(t) { analyticsTab = t; _renderAnalytics(); }
+
+function _renderAnalytics() {
+  const el = document.getElementById('revenue-content');
+  if (!_revData || !_statsData) return;
+  const r = _revData, s = _statsData;
+  const chipBar = `<div style="display:flex;gap:8px;margin:12px 0 16px">
+    <button class="chip" style="flex:1;${analyticsTab==='revenue'?'background:rgba(10,132,255,.15);border-color:rgba(10,132,255,.35);color:var(--btn)':''}" onclick="setAnalyticsTab('revenue')">💰 Daromad</button>
+    <button class="chip" style="flex:1;${analyticsTab==='stats'?'background:rgba(10,132,255,.15);border-color:rgba(10,132,255,.35);color:var(--btn)':''}" onclick="setAnalyticsTab('stats')">📊 Statistika</button>
+  </div>`;
+  let content = '';
+  if (analyticsTab === 'revenue') {
+    const svcRows = (r.byService||[]).map(sv=>`
       <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border)">
-        <div><div style="font-size:14px;font-weight:500">${s.name||'—'}</div><div style="font-size:12px;color:var(--hint)">${s.count} ta qabul</div></div>
-        <div style="font-size:15px;font-weight:700;color:var(--green)">${(s.revenue||0).toLocaleString()} so'm</div>
+        <div><div style="font-size:14px;font-weight:500">${sv.name||'—'}</div><div style="font-size:12px;color:var(--hint)">${sv.count} ta qabul</div></div>
+        <div style="font-size:15px;font-weight:700;color:var(--green)">${(sv.revenue||0).toLocaleString()} so'm</div>
       </div>`).join('') || `<div style="font-size:13px;color:var(--hint);padding:8px 0">Ma'lumot yo'q</div>`;
     const userRows = (r.byUser||[]).slice(0,10).map(u=>`
       <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border)">
         <div><div style="font-size:14px;font-weight:500">${u.name||'—'}</div><div style="font-size:12px;color:var(--hint)">${u.count} ta qabul</div></div>
         <div style="font-size:15px;font-weight:700;color:var(--btn)">${(u.revenue||0).toLocaleString()} so'm</div>
       </div>`).join('') || `<div style="font-size:13px;color:var(--hint);padding:8px 0">Ma'lumot yo'q</div>`;
-    el.innerHTML = `
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:12px 0">
+    content = `
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
         <div style="grid-column:span 2;background:linear-gradient(135deg,rgba(48,209,88,.15),rgba(10,132,255,.1));border:1px solid rgba(48,209,88,.28);border-radius:16px;padding:18px;text-align:center">
           <div style="font-size:11px;color:var(--hint);text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px">Umumiy daromad</div>
           <div style="font-size:34px;font-weight:800;letter-spacing:-1px;color:var(--green);line-height:1">${(r.totalRevenue||0).toLocaleString()}</div>
@@ -362,41 +378,56 @@ async function loadRevenue() {
       </div>
       <div class="card" style="margin-bottom:10px">
         <div style="font-weight:600;font-size:14px;margin-bottom:10px">👥 Mijozlar (Top 10)</div>${userRows}
+      </div>`;
+  } else {
+    const m = s.monthly || [];
+    const rv = s.reviewStats || { total:0, avg:0 };
+    content = `
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
+        <div style="grid-column:span 2;background:linear-gradient(135deg,rgba(10,132,255,.14),rgba(191,90,242,.1));border:1px solid rgba(10,132,255,.22);border-radius:16px;padding:18px;text-align:center">
+          <div style="font-size:36px;font-weight:800;letter-spacing:-1.5px;color:var(--btn);line-height:1">${s.total}</div>
+          <div style="font-size:12px;color:var(--hint);margin-top:5px">📋 Jami qabullar</div>
+        </div>
+        <div class="card" style="margin:0"><div style="font-size:28px;font-weight:700;color:var(--green);letter-spacing:-.5px">${s.confirmed}</div><div style="font-size:11px;color:var(--hint);margin-top:3px">✅ Tasdiqlangan</div></div>
+        <div class="card" style="margin:0"><div style="font-size:28px;font-weight:700;color:var(--orange);letter-spacing:-.5px">${s.completed}</div><div style="font-size:11px;color:var(--hint);margin-top:3px">✔️ Yakunlangan</div></div>
+        <div class="card" style="margin:0"><div style="font-size:28px;font-weight:700;color:var(--red);letter-spacing:-.5px">${s.cancelled}</div><div style="font-size:11px;color:var(--hint);margin-top:3px">❌ Bekor</div></div>
+        <div class="card" style="margin:0"><div style="font-size:28px;font-weight:700;color:var(--btn);letter-spacing:-.5px">${s.users}</div><div style="font-size:11px;color:var(--hint);margin-top:3px">👥 Bemorlar</div></div>
       </div>
-      ${(() => {
-        const m = s.monthly || [];
-        const rv = s.reviewStats || { total:0, avg:0 };
-        const UZ_M = {};
-        ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'].forEach((n,i)=>UZ_M[String(i+1).padStart(2,'0')]=n);
-        return `<div class="card" style="margin-bottom:10px">
-          <div style="font-weight:600;font-size:14px;margin-bottom:12px">📊 Qabullar statistikasi</div>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">
-            <div style="grid-column:span 2;background:rgba(10,132,255,.09);border:1px solid rgba(10,132,255,.18);border-radius:12px;padding:12px;text-align:center">
-              <div style="font-size:28px;font-weight:800;color:var(--btn)">${s.total}</div>
-              <div style="font-size:11px;color:var(--hint)">Jami qabullar</div>
-            </div>
-            <div class="card" style="margin:0;text-align:center"><div style="font-size:20px;font-weight:700;color:var(--green)">${s.confirmed}</div><div style="font-size:11px;color:var(--hint)">Tasdiqlangan</div></div>
-            <div class="card" style="margin:0;text-align:center"><div style="font-size:20px;font-weight:700;color:var(--orange)">${s.completed}</div><div style="font-size:11px;color:var(--hint)">Yakunlangan</div></div>
-            <div class="card" style="margin:0;text-align:center"><div style="font-size:20px;font-weight:700;color:var(--red)">${s.cancelled}</div><div style="font-size:11px;color:var(--hint)">Bekor</div></div>
-            <div class="card" style="margin:0;text-align:center"><div style="font-size:20px;font-weight:700;color:var(--btn)">${s.users}</div><div style="font-size:11px;color:var(--hint)">Bemorlar</div></div>
-          </div>
-          ${m.length?`<div style="font-size:13px;font-weight:500;color:var(--hint);margin-bottom:8px">Oylik qabullar</div><canvas id="rev-month-chart" height="130"></canvas>`:''}
-          ${rv.total?`<div style="margin-top:12px;display:flex;align-items:center;gap:8px"><span style="font-size:22px;font-weight:700;color:#ff9f0a">${rv.avg}</span><span style="font-size:13px;color:var(--hint)">/ 5 · ${rv.total} ta fikr</span></div>`:''}
-        </div>`;
-      })()}`;
+      <div class="card" style="margin-bottom:10px">
+        <div style="font-weight:600;font-size:14px;margin-bottom:14px">📈 Oylik qabullar</div>
+        ${m.length?`<canvas id="rev-month-chart" height="150"></canvas>`:`<p style="color:var(--hint);text-align:center;font-size:13px;padding:20px 0">Ma'lumot yo'q</p>`}
+      </div>
+      ${rv.total?`<div class="card" style="margin-bottom:10px"><div style="font-weight:600;font-size:14px;margin-bottom:6px">⭐ Mijozlar bahosi</div><div style="margin-bottom:14px"><span style="font-size:26px;font-weight:700;color:#ff9f0a">${rv.avg}</span><span style="font-size:13px;color:var(--hint)"> / 5 · ${rv.total} ta fikr</span></div><canvas id="rating-chart" height="110"></canvas></div>`:''}`;
+  }
+  el.innerHTML = chipBar + content;
+  if (analyticsTab === 'stats') {
     const m = s.monthly || [];
     if (m.length) {
-      const UZ_M2 = {};
-      ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'].forEach((n,i)=>UZ_M2[String(i+1).padStart(2,'0')]=n);
-      const mLabels = m.map(x=>{ const[,mo]=x.month.split('-'); return UZ_M2[mo]||mo; });
+      const UZ_M = {};
+      ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'].forEach((n,i)=>UZ_M[String(i+1).padStart(2,'0')]=n);
+      const mLabels = m.map(x=>{ const[,mo]=x.month.split('-'); return UZ_M[mo]||mo; });
       if (monthChart) monthChart.destroy();
       monthChart = new Chart(document.getElementById('rev-month-chart'), {
         type:'bar',
-        data:{labels:mLabels,datasets:[{data:m.map(x=>x.count),backgroundColor:'rgba(10,132,255,.65)',borderRadius:6,borderSkipped:false}]},
+        data:{labels:mLabels,datasets:[{data:m.map(x=>x.count),backgroundColor:'rgba(10,132,255,.65)',borderRadius:7,borderSkipped:false}]},
         options:{responsive:true,plugins:{legend:{display:false}},scales:{x:{grid:{color:'rgba(255,255,255,.04)'},ticks:{color:'#636366',font:{size:11}}},y:{grid:{color:'rgba(255,255,255,.06)'},ticks:{color:'#636366',font:{size:11},stepSize:1}}}}
       });
     }
-  } catch(e) { el.innerHTML = `<p style="color:var(--red);text-align:center;margin-top:48px;font-size:13px">${e.message}</p>`; }
+    const rv = s.reviewStats || { total:0, avg:0 };
+    if (rv.total) {
+      if (ratingChart) ratingChart.destroy();
+      ratingChart = new Chart(document.getElementById('rating-chart'), {
+        type:'bar',
+        data:{labels:['1⭐','2⭐','3⭐','4⭐','5⭐'],datasets:[{data:[0,0,0,0,0],backgroundColor:'rgba(255,159,10,.7)',borderRadius:7,borderSkipped:false}]},
+        options:{responsive:true,plugins:{legend:{display:false}},scales:{x:{grid:{display:false},ticks:{color:'#636366',font:{size:11}}},y:{grid:{color:'rgba(255,255,255,.06)'},ticks:{color:'#636366',font:{size:11},stepSize:1}}}}
+      });
+      api('/reviews').then(reviews => {
+        const dist=[0,0,0,0,0];
+        reviews.forEach(rv=>{ if(rv.rating>=1&&rv.rating<=5) dist[rv.rating-1]++; });
+        ratingChart.data.datasets[0].data=dist; ratingChart.update();
+      }).catch(()=>{});
+    }
+  }
 }
 
 let monthChart = null, ratingChart = null;
@@ -491,6 +522,8 @@ async function onSearch(val) {
 
 const DAY_LABELS = ['','Du','Se','Ch','Pa','Ju','Sh','Ya'];
 let scheduleData=null, clinicData=null, pendingHours=null, servicesData=[], subData=null;
+let analyticsTab='revenue', _revData=null, _statsData=null;
+let openSections=new Set(['svc','sub']);
 
 function allTimeSlots() {
   const s=[];
@@ -547,63 +580,31 @@ async function loadSettings() {
   } catch(e) { el.innerHTML=`<p style="color:var(--red);text-align:center;margin-top:48px;font-size:13px">${e.message}</p>`; }
 }
 
+function toggleSection(id) {
+  if (openSections.has(id)) openSections.delete(id);
+  else openSections.add(id);
+  renderSettings();
+}
+
 function renderSettings() {
-  const el=document.getElementById('settings-content');
-  const activeDays=scheduleData.workDays||[];
-  const dayChips=[1,2,3,4,5,6,7].map(d=>`<span class="chip chip-sm ${activeDays.includes(d)?'on':''}" id="day-${d}" onclick="toggleDay(${d})">${DAY_LABELS[d]}</span>`).join('');
-  const hourChips=allTimeSlots().map(t=>`<span class="chip chip-sm ${pendingHours.includes(t)?'on':''}" id="hour-${t.replace(':','-')}" onclick="toggleHour('${t}')">${t}</span>`).join('');
-  el.innerHTML=`
-  <div class="sec-t">📅 Haftalik ish kunlari</div>
-  <div class="card"><div style="display:flex;flex-wrap:wrap;gap:8px">${dayChips}</div></div>
-  <div class="sec-t">🗓 Maxsus kunlar (keyingi 21 kun)</div>
-  <div class="card">
-    <div style="font-size:12px;color:var(--hint);margin-bottom:10px">Bosing: ish kuni ↔ dam olish kuni</div>
-    <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;text-align:center">
-      ${['Du','Se','Ch','Pa','Ju','Sh','Ya'].map(d=>`<div style="font-size:10px;color:var(--hint);font-weight:600;padding-bottom:4px">${d}</div>`).join('')}
-      ${buildCalendar(scheduleData)}
-    </div>
-  </div>
-  <div class="sec-t">⏰ Ish soatlari</div>
-  <div class="card">
-    <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px" id="hours-grid">${hourChips}</div>
-    <button class="btn-p" onclick="saveHours()">💾 Saqlash</button>
-  </div>
-  <div class="sec-t">🏥 Klinika ma'lumotlari</div>
-  <div class="card">
-    <label class="f-lbl">Klinika nomi</label><input class="f-inp" id="cf-name" value="${clinicData.name||''}" placeholder="Nomi"/>
-    <label class="f-lbl">Telefon</label><input class="f-inp" id="cf-phone" value="${clinicData.phone||''}" placeholder="+998 ..."/>
-    <label class="f-lbl">Manzil</label><input class="f-inp" id="cf-address" value="${clinicData.address||''}" placeholder="Manzil"/>
-    <label class="f-lbl">Telegram</label><input class="f-inp" id="cf-tg" value="${clinicData.telegram||''}" placeholder="@username"/>
-    <label class="f-lbl">Xarita URL</label><input class="f-inp" id="cf-maps" value="${clinicData.mapsUrl||''}" placeholder="https://maps.app.goo.gl/..."/>
-    <button class="btn-p" onclick="saveClinicInfo()">💾 Saqlash</button>
-  </div>
-  ${subData ? (() => {
-    const statusLabels={trial:'🆓 Sinov davri',active:'✅ Faol',expired:'❌ Tugagan',suspended:'⛔ To\'xtatilgan'};
-    const statusColors={trial:'var(--btn)',active:'var(--green)',expired:'var(--red)',suspended:'var(--red)'};
-    const color=statusColors[subData.status]||'var(--hint)';
-    const daysLine=subData.daysLeft!=null?(subData.daysLeft>0?`<div style="color:var(--hint);font-size:13px;margin-top:4px">⏳ ${subData.daysLeft} kun qoldi</div>`:`<div style="color:var(--red);font-size:13px;margin-top:4px">❗ Muddati tugagan</div>`):'';
-    const endsLine=subData.endsAt?`<div style="color:var(--hint);font-size:12px;margin-top:2px">📅 ${new Date(subData.endsAt).toLocaleDateString('ru-RU')}</div>`:'';
-    let plansHtml='';
-    if(subData.plans&&subData.plans.length){
-      const endsDateStr=subData.endsAt?new Date(subData.endsAt).toLocaleDateString('ru-RU'):'—';
-      plansHtml=subData.plans.map(p=>{
-        const isActivePlan=subData.status==='active'&&subData.currentPlan===p.name;
-        return `<div class="card" style="margin-bottom:8px${isActivePlan?';border-color:rgba(48,209,88,.35)':''}">
-          <div style="display:flex;justify-content:space-between;align-items:flex-start">
-            <div><div style="font-weight:600;font-size:15px">${p.name}</div><div style="color:var(--hint);font-size:13px;margin:4px 0">${p.durationDays} kun</div><div style="font-size:17px;font-weight:700;color:var(--btn)">${p.price.toLocaleString()} so'm</div></div>
-            ${isActivePlan?`<span class="pill" style="background:rgba(48,209,88,.15);color:var(--green);flex-shrink:0;margin-top:2px">Faol</span>`:''}
-          </div>
-          ${isActivePlan?`<div style="margin-top:10px;font-size:13px;color:var(--green)">✅ Bu tarif ${endsDateStr} gacha faol</div>`:`<button class="btn-p" style="margin-top:12px" onclick="selectPlan(${p.id})">Tanlash</button>`}
-        </div>`;
-      }).join('');
-    }
-    return `<div class="sec-t">💳 Obuna</div>
-    <div class="card"><div style="font-size:16px;font-weight:700;color:${color}">${statusLabels[subData.status]||subData.status}</div>${daysLine}${endsLine}</div>
-    ${plansHtml?`<div style="margin-bottom:4px">${plansHtml}<a href="https://t.me/doniyorjon_k" style="display:block;text-align:center;color:var(--hint);font-size:13px;margin-top:4px;margin-bottom:12px;text-decoration:none">📞 Adminga murojaat</a></div>`:''}`;
-  })() : ''}
-  <div class="sec-t">🦷 Xizmatlar va narxi</div>
-  <div class="card" style="margin-bottom:20px">
-    ${servicesData.length ? servicesData.map(s=>{
+  const el = document.getElementById('settings-content');
+  const activeDays = scheduleData.workDays || [];
+  const dayChips = [1,2,3,4,5,6,7].map(d=>`<span class="chip chip-sm ${activeDays.includes(d)?'on':''}" id="day-${d}" onclick="toggleDay(${d})">${DAY_LABELS[d]}</span>`).join('');
+  const hourChips = allTimeSlots().map(t=>`<span class="chip chip-sm ${pendingHours.includes(t)?'on':''}" id="hour-${t.replace(':','-')}" onclick="toggleHour('${t}')">${t}</span>`).join('');
+
+  const acc = (id, title, body) => {
+    const open = openSections.has(id);
+    const arr = `<svg viewBox="0 0 24 24" style="width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0;transform:rotate(${open?'0':'-90'}deg);transition:transform .2s"><path d="M6 9l6 6 6-6"/></svg>`;
+    return `<div style="background:var(--bg2);border:1px solid var(--border);border-radius:14px;margin-bottom:10px;overflow:hidden">
+      <div onclick="toggleSection('${id}')" style="display:flex;justify-content:space-between;align-items:center;padding:14px 16px;cursor:pointer;user-select:none">
+        <span style="font-size:14px;font-weight:600">${title}</span>${arr}
+      </div>
+      <div style="display:${open?'block':'none'};padding:0 16px 16px">${body}</div>
+    </div>`;
+  };
+
+  const svcsBody = `
+    ${servicesData.map(s=>{
       const p=parseInt(String(s.price||0).replace(/\D/g,''))||0;
       return `<div id="svc-row-${s.id}" style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--border)">
         <div style="flex:1;min-width:0">
@@ -612,10 +613,10 @@ function renderSettings() {
         </div>
         <div style="display:flex;gap:6px;flex-shrink:0;margin-left:8px">
           <button class="btn-p btn-sm" onclick="editSvc(${s.id})">✏️</button>
-          <button class="btn-r btn-sm" onclick="deleteSvc(${s.id},'${s.name.replace(/'/g,"\\'").replace(/"/g,'\\"')}')">🗑</button>
+          <button class="btn-r btn-sm" onclick="deleteSvc(${s.id},'${s.name.replace(/'/g,"\\'")}')">🗑</button>
         </div>
       </div>`;
-    }).join('') : ''}
+    }).join('')}
     <div style="margin-top:${servicesData.length?'12px':'0'};padding-top:${servicesData.length?'12px':'0'};${servicesData.length?'border-top:1px solid var(--border)':''}">
       <div style="font-size:12px;color:var(--hint);font-weight:600;margin-bottom:8px">➕ Yangi xizmat</div>
       <div style="display:flex;gap:6px;align-items:center">
@@ -623,8 +624,65 @@ function renderSettings() {
         <input class="f-inp" type="number" id="new-svc-price" placeholder="Narx..." style="width:100px;margin:0"/>
         <button class="btn-p btn-sm" style="white-space:nowrap" onclick="addNewSvc()">+ Qo'sh</button>
       </div>
+    </div>`;
+
+  let subBody = '';
+  if (subData) {
+    const statusLabels={trial:'🆓 Sinov davri',active:'✅ Faol',expired:'❌ Tugagan',suspended:'⛔ To\'xtatilgan'};
+    const statusColors={trial:'var(--btn)',active:'var(--green)',expired:'var(--red)',suspended:'var(--red)'};
+    const color=statusColors[subData.status]||'var(--hint)';
+    const daysLine=subData.daysLeft!=null?(subData.daysLeft>0?`<div style="color:var(--hint);font-size:13px;margin-top:4px">⏳ ${subData.daysLeft} kun qoldi</div>`:`<div style="color:var(--red);font-size:13px;margin-top:4px">❗ Muddati tugagan</div>`):'';
+    const endsLine=subData.endsAt?`<div style="color:var(--hint);font-size:12px;margin-top:2px">📅 ${new Date(subData.endsAt).toLocaleDateString('ru-RU')}</div>`:'';
+    subBody=`<div style="margin-bottom:12px"><div style="font-size:16px;font-weight:700;color:${color}">${statusLabels[subData.status]||subData.status}</div>${daysLine}${endsLine}</div>`;
+    if(subData.plans&&subData.plans.length){
+      const endsDateStr=subData.endsAt?new Date(subData.endsAt).toLocaleDateString('ru-RU'):'—';
+      subBody+=subData.plans.map(p=>{
+        const isActivePlan=subData.status==='active'&&subData.currentPlan===p.name;
+        return `<div style="background:var(--bg3);border:1px solid ${isActivePlan?'rgba(48,209,88,.35)':'var(--border)'};border-radius:12px;padding:12px;margin-bottom:8px">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start">
+            <div><div style="font-weight:600;font-size:15px">${p.name}</div><div style="color:var(--hint);font-size:13px;margin:4px 0">${p.durationDays} kun</div><div style="font-size:17px;font-weight:700;color:var(--btn)">${p.price.toLocaleString()} so'm</div></div>
+            ${isActivePlan?`<span class="pill" style="background:rgba(48,209,88,.15);color:var(--green);flex-shrink:0;margin-top:2px">Faol</span>`:''}
+          </div>
+          ${isActivePlan?`<div style="margin-top:10px;font-size:13px;color:var(--green)">✅ Bu tarif ${endsDateStr} gacha faol</div>`:`<button class="btn-p" style="margin-top:12px;width:100%" onclick="selectPlan(${p.id})">Tanlash</button>`}
+        </div>`;
+      }).join('')+`<a href="https://t.me/doniyorjon_k" style="display:block;text-align:center;color:var(--hint);font-size:13px;margin-top:4px;text-decoration:none">📞 Adminga murojaat</a>`;
+    }
+  } else {
+    subBody=`<div style="font-size:13px;color:var(--hint);text-align:center;padding:12px 0">Ma'lumot yo'q</div>`;
+  }
+
+  const schedBody = `
+    <div style="margin-bottom:14px">
+      <div style="font-size:12px;color:var(--hint);font-weight:600;margin-bottom:8px">Haftalik ish kunlari</div>
+      <div style="display:flex;flex-wrap:wrap;gap:8px">${dayChips}</div>
     </div>
-  </div>`;
+    <div>
+      <div style="font-size:12px;color:var(--hint);font-weight:600;margin-bottom:8px">Ish soatlari</div>
+      <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px" id="hours-grid">${hourChips}</div>
+      <button class="btn-p" onclick="saveHours()">💾 Soatlarni saqlash</button>
+    </div>`;
+
+  const specialBody = `
+    <div style="font-size:12px;color:var(--hint);margin-bottom:10px">Bosing: ish kuni ↔ dam olish kuni</div>
+    <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;text-align:center">
+      ${['Du','Se','Ch','Pa','Ju','Sh','Ya'].map(d=>`<div style="font-size:10px;color:var(--hint);font-weight:600;padding-bottom:4px">${d}</div>`).join('')}
+      ${buildCalendar(scheduleData)}
+    </div>`;
+
+  const clinicBody = `
+    <label class="f-lbl">Klinika nomi</label><input class="f-inp" id="cf-name" value="${clinicData.name||''}" placeholder="Nomi"/>
+    <label class="f-lbl">Telefon</label><input class="f-inp" id="cf-phone" value="${clinicData.phone||''}" placeholder="+998 ..."/>
+    <label class="f-lbl">Manzil</label><input class="f-inp" id="cf-address" value="${clinicData.address||''}" placeholder="Manzil"/>
+    <label class="f-lbl">Telegram</label><input class="f-inp" id="cf-tg" value="${clinicData.telegram||''}" placeholder="@username"/>
+    <label class="f-lbl">Xarita URL</label><input class="f-inp" id="cf-maps" value="${clinicData.mapsUrl||''}" placeholder="https://maps.app.goo.gl/..."/>
+    <button class="btn-p" onclick="saveClinicInfo()">💾 Saqlash</button>`;
+
+  el.innerHTML =
+    acc('svc',  '🦷 Xizmatlar va narxi', svcsBody) +
+    acc('sub',  '💳 Obuna',              subBody)  +
+    acc('sched','⏰ Ish jadvali',        schedBody) +
+    acc('special','🗓 Maxsus kunlar',    specialBody) +
+    acc('clinic','🏥 Klinika ma\'lumotlari', clinicBody);
 }
 
 async function toggleDay(d) {
