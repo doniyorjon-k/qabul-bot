@@ -154,7 +154,7 @@ export class AppointmentsService {
     });
   }
 
-  async findAllForAdmin(clinicId: number, limit = 50): Promise<Appointment[]> {
+  async findAllForAdmin(clinicId: number, limit = 500): Promise<Appointment[]> {
     return this.appointmentsRepo.find({
       where: { clinic: { id: clinicId } },
       relations: ['service', 'timeSlot', 'user'],

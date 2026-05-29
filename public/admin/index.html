@@ -57,7 +57,7 @@
 
 <div class="pg">
   <div id="sec-today" class="section active"><div id="today-content"><div class="spin"></div></div></div>
-  <div id="sec-week" class="section"><div id="week-content"><div class="spin"></div></div></div>
+  <div id="sec-apts" class="section"><div id="apts-content"><div class="spin"></div></div></div>
   <div id="sec-stats" class="section"><div id="stats-content"><div class="spin"></div></div></div>
   <div id="sec-reviews" class="section"><div id="reviews-content"><div class="spin"></div></div></div>
   <div id="sec-search" class="section">
@@ -98,8 +98,8 @@
   <button class="tab on" id="tab-today" onclick="switchTab('today')">
     <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>Bugun
   </button>
-  <button class="tab" id="tab-week" onclick="switchTab('week')">
-    <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18M8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01"/></svg>Hafta
+  <button class="tab" id="tab-apts" onclick="switchTab('apts')">
+    <svg viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><path d="M9 12h6M9 16h4"/></svg>Qabullar
   </button>
   <button class="tab" id="tab-stats" onclick="switchTab('stats')">
     <svg viewBox="0 0 24 24"><path d="M18 20V10M12 20V4M6 20v-6"/></svg>Statistika
@@ -240,26 +240,69 @@ async function loadToday() {
 }
 
 const UZ_DAYS = ['Yakshanba','Dushanba','Seshanba','Chorshanba','Payshanba','Juma','Shanba'];
-async function loadWeek() {
-  const el = document.getElementById('week-content');
+let allApts = [], aptsFilters = { service: '', status: '', dateFrom: '', dateTo: '' }, _aptsSvcs = [];
+
+async function loadApts() {
+  const el = document.getElementById('apts-content');
   el.innerHTML = '<div class="spin"></div>';
   try {
-    const list = await api('/appointments/week');
-    if (!list.length) {
-      el.innerHTML = `<div style="text-align:center;padding:60px 16px"><div style="font-size:52px;margin-bottom:14px">📆</div><div style="font-size:17px;font-weight:700">Bu hafta qabul yo'q</div></div>`;
-      return;
-    }
-    let html = '', prev = '';
-    for (const a of list) {
-      if (a.timeSlot.date !== prev) {
-        prev = a.timeSlot.date;
-        const day = UZ_DAYS[new Date(a.timeSlot.date+'T00:00:00+05:00').getDay()];
-        html += `<div class="sec-t">${fmtDate(a.timeSlot.date)} · ${day}</div>`;
-      }
-      html += aptCard(a);
-    }
-    el.innerHTML = html;
+    allApts = await api('/appointments/all');
+    _aptsSvcs = [...new Set(allApts.map(a => a.service?.name).filter(Boolean))];
+    _renderAptsPage();
   } catch(e) { el.innerHTML = `<p style="color:var(--red);text-align:center;margin-top:48px;font-size:13px">${e.message}</p>`; }
+}
+
+function setAptsSvc(i) { aptsFilters.service = i < 0 ? '' : _aptsSvcs[i]; _renderAptsPage(); }
+function setAptsSt(s) { aptsFilters.status = s; _renderAptsPage(); }
+function setAptsDate(key, val) { aptsFilters[key] = val; _renderAptsList(); }
+
+function _renderAptsPage() {
+  const el = document.getElementById('apts-content');
+  const statusList = ['confirmed','pending','completed','cancelled'];
+  const svcChips = `<span class="chip chip-sm ${!aptsFilters.service?'on':''}" onclick="setAptsSvc(-1)">Hammasi</span>` +
+    _aptsSvcs.map((s,i) => `<span class="chip chip-sm ${aptsFilters.service===s?'on':''}" onclick="setAptsSvc(${i})">${s}</span>`).join('');
+  const stChips = `<span class="chip chip-sm ${!aptsFilters.status?'on':''}" onclick="setAptsSt('')">Hammasi</span>` +
+    statusList.map(s => `<span class="chip chip-sm ${aptsFilters.status===s?'on':''}" onclick="setAptsSt('${s}')">${LBL[s]||s}</span>`).join('');
+  el.innerHTML = `
+    <div style="margin:10px 0 4px">
+      <div class="sec-t" style="margin-top:8px">Kategoriya</div>
+      <div style="display:flex;flex-wrap:wrap;gap:6px">${svcChips}</div>
+    </div>
+    <div style="margin:10px 0 4px">
+      <div class="sec-t" style="margin-top:8px">Holat</div>
+      <div style="display:flex;flex-wrap:wrap;gap:6px">${stChips}</div>
+    </div>
+    <div style="margin:10px 0 12px">
+      <div class="sec-t" style="margin-top:8px">Sana oralig'i</div>
+      <div style="display:flex;gap:8px">
+        <input type="date" class="f-inp" style="flex:1;margin:0" value="${aptsFilters.dateFrom}" onchange="setAptsDate('dateFrom',this.value)"/>
+        <input type="date" class="f-inp" style="flex:1;margin:0" value="${aptsFilters.dateTo}" onchange="setAptsDate('dateTo',this.value)"/>
+      </div>
+    </div>
+    <div id="apts-list"></div>`;
+  _renderAptsList();
+}
+
+function _renderAptsList() {
+  const el = document.getElementById('apts-list');
+  if (!el) return;
+  let list = allApts.slice();
+  if (aptsFilters.service) list = list.filter(a => a.service?.name === aptsFilters.service);
+  if (aptsFilters.status) list = list.filter(a => a.status === aptsFilters.status);
+  if (aptsFilters.dateFrom) list = list.filter(a => (a.timeSlot?.date || '') >= aptsFilters.dateFrom);
+  if (aptsFilters.dateTo) list = list.filter(a => (a.timeSlot?.date || '') <= aptsFilters.dateTo);
+  if (!list.length) {
+    el.innerHTML = `<div style="text-align:center;padding:40px 16px"><div style="font-size:40px;margin-bottom:10px">🔍</div><div style="font-size:15px;color:var(--hint)">Qabul topilmadi</div></div>`;
+    return;
+  }
+  const grouped = {};
+  for (const a of list) { const dt = a.timeSlot?.date || '0000'; if (!grouped[dt]) grouped[dt] = []; grouped[dt].push(a); }
+  let html = `<div style="font-size:12px;color:var(--hint);margin-bottom:8px">${list.length} ta qabul</div>`;
+  for (const dt of Object.keys(grouped).sort((a,b) => b.localeCompare(a))) {
+    if (dt !== '0000') { const day = UZ_DAYS[new Date(dt+'T00:00:00+05:00').getDay()]; html += `<div class="sec-t">${fmtDate(dt)} · ${day}</div>`; }
+    html += grouped[dt].map(a => aptCard(a)).join('');
+  }
+  el.innerHTML = html;
 }
 
 let monthChart = null, ratingChart = null;
@@ -467,7 +510,7 @@ async function saveClinicInfo() {
   catch(e){showCustomAlert('❌ '+e.message);}
 }
 
-const TABS=['today','week','stats','reviews','search','settings','sub'];
+const TABS=['today','apts','stats','reviews','search','settings','sub'];
 let curTab='today';
 const loaded={};
 function switchTab(tab){
@@ -475,7 +518,7 @@ function switchTab(tab){
   TABS.forEach(t=>{ document.getElementById('sec-'+t).classList.toggle('active',t===tab); document.getElementById('tab-'+t).classList.toggle('on',t===tab); });
   if(!loaded[tab]){loaded[tab]=true;loadTabFn(tab);}
 }
-function loadTabFn(tab){ if(tab==='today')loadToday(); else if(tab==='week')loadWeek(); else if(tab==='stats')loadStats(); else if(tab==='reviews')loadReviews(); else if(tab==='settings')loadSettings(); else if(tab==='sub')loadSub(); }
+function loadTabFn(tab){ if(tab==='today')loadToday(); else if(tab==='apts')loadApts(); else if(tab==='stats')loadStats(); else if(tab==='reviews')loadReviews(); else if(tab==='settings')loadSettings(); else if(tab==='sub')loadSub(); }
 function refreshTab(){ delete loaded[curTab]; loadTabFn(curTab); }
 loaded['today']=true; loadToday();
 
