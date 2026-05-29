@@ -13,6 +13,8 @@ import { ClinicsService } from '../clinics/clinics.service';
 import { PaymentsService } from '../payments/payments.service';
 import { PlansService } from '../plans/plans.service';
 import { PromosService } from '../promos/promos.service';
+import { VisitPaymentsService } from '../visit-payments/visit-payments.service';
+import { VisitPaymentStatus } from '../database/entities/visit-payment.entity';
 import {
   mainMenuKeyboard, cancelKeyboard, confirmKeyboard,
   nameStepKeyboard, phoneStepKeyboard,
@@ -35,6 +37,7 @@ export interface BotServices {
   paymentsService: PaymentsService;
   plansService: PlansService;
   promosService: PromosService;
+  visitPaymentsService: VisitPaymentsService;
 }
 
 interface UserSession {
@@ -63,6 +66,10 @@ interface AdminSession {
   payPlanId?: number;
   payPlanName?: string;
   payAmount?: number;
+  visitPayStep?: string;
+  visitPayAptId?: number;
+  visitPayUserId?: number;
+  visitPayItems?: { serviceName: string; price: number }[];
 }
 
 interface ReviewSession {
@@ -841,6 +848,131 @@ export function setupBotHandlers(
     await ctx.editMessageText(text, { parse_mode: 'Markdown', ...Markup.inlineKeyboard([[actionBtn, Markup.button.callback('⬅️ Qabullarga qaytish', 'adm:apts')]]) });
   });
 
+  // ── Attendance check handlers ────────────────────────────────────
+  bot.action(/^adm:attend:(\d+):showed$/, async (ctx) => {
+    await ctx.answerCbQuery();
+    if (!isAdmin(ctx.from.id)) return;
+    const aptId = parseInt((ctx as any).match[1]);
+    await services.appointmentsService.markAttendanceStatus(aptId, 'showed');
+    const apt = await services.appointmentsService.findById(aptId);
+    if (!apt) { await ctx.editMessageText('❌ Qabul topilmadi.'); return; }
+
+    const alreadyPaid = await services.visitPaymentsService.hasPaymentForAppointment(aptId);
+    if (alreadyPaid) {
+      await ctx.editMessageText('✅ Bemor keldi. To\'lov allaqachon kiritilgan.', Markup.inlineKeyboard([[Markup.button.callback('⬅️ Admin panel', 'adm:open')]]));
+      return;
+    }
+
+    const priceNum = apt.service?.price ? parseInt(String(apt.service.price).replace(/\D/g, '')) || 0 : 0;
+    const items = [{ serviceName: apt.service?.name || 'Xizmat', price: priceNum }];
+    setASess(ctx.from.id, { visitPayStep: 'payment_menu', visitPayAptId: aptId, visitPayUserId: apt.user?.id, visitPayItems: items });
+    await ctx.editMessageText(buildVisitPayText(items), { parse_mode: 'Markdown', ...buildVisitPayKb(items, clinicId) });
+  });
+
+  bot.action(/^adm:attend:(\d+):noshow$/, async (ctx) => {
+    await ctx.answerCbQuery();
+    if (!isAdmin(ctx.from.id)) return;
+    const aptId = parseInt((ctx as any).match[1]);
+    await services.appointmentsService.markAttendanceStatus(aptId, 'no_show');
+    delASess(ctx.from.id);
+    await ctx.editMessageText('📊 Kelmagan qabul statistikaga qo\'shildi.', Markup.inlineKeyboard([[Markup.button.callback('⬅️ Admin panel', 'adm:open')]]));
+  });
+
+  bot.action('adm:vp:paid', async (ctx) => {
+    await ctx.answerCbQuery();
+    if (!isAdmin(ctx.from.id)) return;
+    const sess = getASess(ctx.from.id);
+    if (!sess.visitPayItems?.length) return;
+    const total = sess.visitPayItems.reduce((s, i) => s + i.price, 0);
+    const itemsText = sess.visitPayItems.map(i => `• ${i.serviceName} — ${i.price.toLocaleString()} so'm`).join('\n');
+    sess.visitPayStep = 'confirm_paid';
+    setASess(ctx.from.id, sess);
+    await ctx.editMessageText(
+      `✅ *To'lovni tasdiqlash*\n\n${itemsText}\n\n💰 Jami: *${total.toLocaleString()} so'm*\n\nTasdiqlaysizmi?`,
+      { parse_mode: 'Markdown', ...Markup.inlineKeyboard([[Markup.button.callback('✅ Ha, tasdiqlash', 'adm:vp:confirm'), Markup.button.callback('⬅️ Orqaga', 'adm:vp:back')]]) },
+    );
+  });
+
+  bot.action('adm:vp:confirm', async (ctx) => {
+    await ctx.answerCbQuery();
+    if (!isAdmin(ctx.from.id)) return;
+    const sess = getASess(ctx.from.id);
+    if (!sess.visitPayItems?.length) return;
+    const total = sess.visitPayItems.reduce((s, i) => s + i.price, 0);
+    await services.visitPaymentsService.create({
+      clinicId,
+      appointmentId: sess.visitPayAptId,
+      userId: sess.visitPayUserId,
+      items: sess.visitPayItems,
+      totalAmount: total,
+      paidAmount: total,
+      status: VisitPaymentStatus.PAID,
+    });
+    delASess(ctx.from.id);
+    await ctx.editMessageText(`✅ *To'lov qabul qilindi!*\n\n💰 ${total.toLocaleString()} so'm`, { parse_mode: 'Markdown', ...Markup.inlineKeyboard([[Markup.button.callback('⬅️ Admin panel', 'adm:open')]]) });
+  });
+
+  bot.action('adm:vp:partial', async (ctx) => {
+    await ctx.answerCbQuery();
+    if (!isAdmin(ctx.from.id)) return;
+    const sess = getASess(ctx.from.id);
+    sess.visitPayStep = 'enter_partial';
+    setASess(ctx.from.id, sess);
+    const total = (sess.visitPayItems || []).reduce((s, i) => s + i.price, 0);
+    await ctx.editMessageText(
+      `💳 Qisman to'lov\n\nJami: *${total.toLocaleString()} so'm*\n\nQancha to'landi? (raqam kiriting):`,
+      { parse_mode: 'Markdown', ...Markup.inlineKeyboard([[Markup.button.callback('⬅️ Orqaga', 'adm:vp:back')]]) },
+    );
+  });
+
+  bot.action('adm:vp:unpaid', async (ctx) => {
+    await ctx.answerCbQuery();
+    if (!isAdmin(ctx.from.id)) return;
+    const sess = getASess(ctx.from.id);
+    sess.visitPayStep = 'enter_unpaid_reason';
+    setASess(ctx.from.id, sess);
+    await ctx.editMessageText(
+      '❌ To\'lanmadi\n\nSababni yozing (ixtiyoriy, yuborish uchun \'-\' yozing):',
+      Markup.inlineKeyboard([[Markup.button.callback('⬅️ Orqaga', 'adm:vp:back')]]),
+    );
+  });
+
+  bot.action('adm:vp:addsvc', async (ctx) => {
+    await ctx.answerCbQuery();
+    if (!isAdmin(ctx.from.id)) return;
+    const svcList = await services.servicesService.findAllAdmin(clinicId);
+    const rows = svcList.map(s => [Markup.button.callback(
+      `${s.emoji || '🦷'} ${s.name}${s.price ? ' — ' + parseInt(String(s.price).replace(/\D/g,'')||'0').toLocaleString() + ' so\'m' : ''}`,
+      `adm:vp:svc:${s.id}`,
+    )]);
+    rows.push([Markup.button.callback('⬅️ Orqaga', 'adm:vp:back')]);
+    await ctx.editMessageText('➕ Qaysi xizmatni qo\'shmoqchisiz?', Markup.inlineKeyboard(rows));
+  });
+
+  bot.action(/^adm:vp:svc:(\d+)$/, async (ctx) => {
+    await ctx.answerCbQuery();
+    if (!isAdmin(ctx.from.id)) return;
+    const svcId = parseInt((ctx as any).match[1]);
+    const svc = await services.servicesService.findById(svcId, clinicId);
+    if (!svc) return;
+    const sess = getASess(ctx.from.id);
+    const priceNum = svc.price ? parseInt(String(svc.price).replace(/\D/g, '')) || 0 : 0;
+    sess.visitPayItems = [...(sess.visitPayItems || []), { serviceName: svc.name, price: priceNum }];
+    sess.visitPayStep = 'payment_menu';
+    setASess(ctx.from.id, sess);
+    await ctx.editMessageText(buildVisitPayText(sess.visitPayItems), { parse_mode: 'Markdown', ...buildVisitPayKb(sess.visitPayItems, clinicId) });
+  });
+
+  bot.action('adm:vp:back', async (ctx) => {
+    await ctx.answerCbQuery();
+    if (!isAdmin(ctx.from.id)) return;
+    const sess = getASess(ctx.from.id);
+    if (!sess.visitPayItems) { delASess(ctx.from.id); await ctx.editMessageText('👨‍⚕️ *Admin panel*', { parse_mode: 'Markdown', ...adminMainKb(miniAppUrl) }); return; }
+    sess.visitPayStep = 'payment_menu';
+    setASess(ctx.from.id, sess);
+    await ctx.editMessageText(buildVisitPayText(sess.visitPayItems), { parse_mode: 'Markdown', ...buildVisitPayKb(sess.visitPayItems, clinicId) });
+  });
+
   // ── Statistika ────────────────────────────────────────────────────
   bot.action('adm:stats', async (ctx) => {
     await ctx.answerCbQuery();
@@ -1327,6 +1459,31 @@ export function setupBotHandlers(
     // Admin session handling first
     if (isAdmin(userId)) {
       const aSess = adminSessionMap.get(uKey(userId));
+      if (aSess?.visitPayStep === 'enter_partial') {
+        const amount = parseInt(text.replace(/\D/g, ''));
+        if (isNaN(amount) || amount <= 0) { await ctx.reply('❗ Noto\'g\'ri raqam. Qayta kiriting:'); return; }
+        const total = (aSess.visitPayItems || []).reduce((s, i) => s + i.price, 0);
+        await services.visitPaymentsService.create({
+          clinicId, appointmentId: aSess.visitPayAptId, userId: aSess.visitPayUserId,
+          items: aSess.visitPayItems || [], totalAmount: total, paidAmount: amount,
+          status: VisitPaymentStatus.PARTIAL,
+        });
+        delASess(userId);
+        await ctx.reply(`💳 *Qisman to'lov qabul qilindi!*\n\n💰 ${amount.toLocaleString()} so'm to'landi`, { parse_mode: 'Markdown', ...Markup.inlineKeyboard([[Markup.button.callback('⬅️ Admin panel', 'adm:open')]]) });
+        return;
+      }
+      if (aSess?.visitPayStep === 'enter_unpaid_reason') {
+        const reason = text.trim() === '-' ? undefined : text.trim();
+        const total = (aSess.visitPayItems || []).reduce((s, i) => s + i.price, 0);
+        await services.visitPaymentsService.create({
+          clinicId, appointmentId: aSess.visitPayAptId, userId: aSess.visitPayUserId,
+          items: aSess.visitPayItems || [], totalAmount: total, paidAmount: 0,
+          status: VisitPaymentStatus.UNPAID, reason,
+        });
+        delASess(userId);
+        await ctx.reply('📊 To\'lanmagan qabul statistikaga qo\'shildi.', Markup.inlineKeyboard([[Markup.button.callback('⬅️ Admin panel', 'adm:open')]]));
+        return;
+      }
       if (aSess?.broadcastStep || aSess?.step) {
         // apt:reject
         if (aSess.step === 'apt:reject' && aSess.rejectAptId) {
@@ -1623,6 +1780,22 @@ export function setupBotHandlers(
       try { await bot.telegram.sendMessage(adminId, text, { parse_mode: 'Markdown' }); } catch {}
     }
   };
+}
+
+// ── Visit payment helpers ─────────────────────────────────────────
+
+function buildVisitPayText(items: { serviceName: string; price: number }[]): string {
+  const total = items.reduce((s, i) => s + i.price, 0);
+  const itemsText = items.map(i => `• ${i.serviceName} — ${i.price.toLocaleString()} so'm`).join('\n');
+  return `💳 *To'lov*\n\n📋 Xizmatlar:\n${itemsText}\n\n💰 Jami: *${total.toLocaleString()} so'm*\n\nTo'lov holati?`;
+}
+
+function buildVisitPayKb(items: { serviceName: string; price: number }[], _clinicId: number) {
+  return Markup.inlineKeyboard([
+    [Markup.button.callback('✅ To\'landi', 'adm:vp:paid'), Markup.button.callback('💳 Qisman', 'adm:vp:partial')],
+    [Markup.button.callback('❌ To\'lanmadi', 'adm:vp:unpaid'), Markup.button.callback('➕ Xizmat qo\'shish', 'adm:vp:addsvc')],
+    [Markup.button.callback('⬅️ Admin panel', 'adm:open')],
+  ]);
 }
 
 // ── Keyboard builders ─────────────────────────────────────────────

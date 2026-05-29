@@ -17,6 +17,8 @@ import { Plan } from './database/entities/plan.entity';
 import { Promo } from './database/entities/promo.entity';
 import { Payment } from './database/entities/payment.entity';
 import { Broadcast } from './database/entities/broadcast.entity';
+import { VisitPayment } from './database/entities/visit-payment.entity';
+import { VisitPaymentsModule } from './visit-payments/visit-payments.module';
 import { AdminApiModule } from './admin-api/admin-api.module';
 import { FaqModule } from './faq/faq.module';
 import { ClinicSettingsModule } from './clinic-settings/clinic-settings.module';
@@ -58,7 +60,7 @@ import { PublicApiModule } from './public-api/public-api.module';
         ssl: process.env.DB_SSL === 'true' ? { rejectUnauthorized: false } : false,
         entities: [
           User, Appointment, Service, TimeSlot, WorkSchedule,
-          Faq, ClinicSettings, Review, Clinic, Plan, Promo, Payment, Broadcast,
+          Faq, ClinicSettings, Review, Clinic, Plan, Promo, Payment, Broadcast, VisitPayment,
         ],
         synchronize: true,
         logging: config.get('nodeEnv') === 'development',
@@ -87,6 +89,7 @@ import { PublicApiModule } from './public-api/public-api.module';
     PlansModule,
     PromosModule,
     PaymentsModule,
+    VisitPaymentsModule,
   ],
 })
 export class AppModule {}

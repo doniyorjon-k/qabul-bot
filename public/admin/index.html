@@ -59,6 +59,7 @@
 <div class="pg">
   <div id="sec-today" class="section active"><div id="today-content"><div class="spin"></div></div></div>
   <div id="sec-apts" class="section"><div id="apts-content"><div class="spin"></div></div></div>
+  <div id="sec-revenue" class="section"><div id="revenue-content"><div class="spin"></div></div></div>
   <div id="sec-stats" class="section"><div id="stats-content"><div class="spin"></div></div></div>
   <div id="sec-reviews" class="section"><div id="reviews-content"><div class="spin"></div></div></div>
   <div id="sec-search" class="section">
@@ -86,6 +87,18 @@
   </div>
 </div>
 
+<!-- Appointment Detail Sheet -->
+<div id="apt-detail-sheet" class="sheet hidden">
+  <div class="sheet-box" style="max-height:88vh;overflow-y:auto;padding-bottom:40px">
+    <div class="hdl"></div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+      <div style="font-weight:700;font-size:16px">Qabul tafsilotlari</div>
+      <button class="hdr-btn" onclick="closeAptDetail()">✕</button>
+    </div>
+    <div id="apt-detail-content"><div class="spin"></div></div>
+  </div>
+</div>
+
 <!-- Custom Alert -->
 <div id="cal-alert" style="display:none;position:fixed;inset:0;z-index:100;background:rgba(0,0,0,.65);align-items:center;justify-content:center;padding:24px">
   <div style="background:var(--bg2);border-radius:18px;padding:24px;max-width:320px;width:100%;border:1px solid var(--border)">
@@ -101,6 +114,9 @@
   </button>
   <button class="tab" id="tab-apts" onclick="switchTab('apts')">
     <svg viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><path d="M9 12h6M9 16h4"/></svg>Qabullar
+  </button>
+  <button class="tab" id="tab-revenue" onclick="switchTab('revenue')">
+    <svg viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>Daromad
   </button>
   <button class="tab" id="tab-stats" onclick="switchTab('stats')">
     <svg viewBox="0 0 24 24"><path d="M18 20V10M12 20V4M6 20v-6"/></svg>Statistika
@@ -187,7 +203,7 @@ function aptCard(a, showCancel=true) {
   const st = past ? 'completed' : (a.status || 'confirmed');
   const c = CLR[st] || '#0a84ff';
   const initials = (a.clientName||'?').split(' ').slice(0,2).map(w=>w[0]||'').join('').toUpperCase()||'?';
-  return `<div class="apt">
+  return `<div class="apt" onclick="openAptDetail(${a.id})" style="cursor:pointer">
     <div style="display:flex;gap:12px;align-items:flex-start">
       <div class="apt-av" style="background:${c}1a;color:${c}">${initials}</div>
       <div style="flex:1;min-width:0">
@@ -200,7 +216,7 @@ function aptCard(a, showCancel=true) {
         ${a.clientPhone?`<div style="font-size:12px;color:var(--hint);margin-top:2px">📱 ${a.clientPhone}</div>`:''}
       </div>
     </div>
-    ${showCancel&&!past&&!cant?`<button onclick="openCancel(${a.id})" style="margin-top:12px;width:100%;padding:9px;background:rgba(255,69,58,.12);color:var(--red);border:none;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer">❌ Bekor qilish</button>`:''}
+    ${showCancel&&!past&&!cant?`<button onclick="event.stopPropagation();openCancel(${a.id})" style="margin-top:12px;width:100%;padding:9px;background:rgba(255,69,58,.12);color:var(--red);border:none;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer">❌ Bekor qilish</button>`:''}
     ${showCancel&&!past&&cant&&a.status!=='cancelled'?`<div style="text-align:center;font-size:11px;color:var(--hint);margin-top:10px">⏳ Bekor qilish muddati o'tdi (30 daqiqadan kam)</div>`:''}
   </div>`;
 }
@@ -307,6 +323,52 @@ function _renderAptsList() {
   el.innerHTML = html;
 }
 
+async function loadRevenue() {
+  const el = document.getElementById('revenue-content');
+  el.innerHTML = '<div class="spin"></div>';
+  try {
+    const r = await api('/revenue');
+    const svcRows = (r.byService||[]).map(s=>`
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border)">
+        <div><div style="font-size:14px;font-weight:500">${s.name||'—'}</div><div style="font-size:12px;color:var(--hint)">${s.count} ta qabul</div></div>
+        <div style="font-size:15px;font-weight:700;color:var(--green)">${(s.revenue||0).toLocaleString()} so'm</div>
+      </div>`).join('') || `<div style="font-size:13px;color:var(--hint);padding:8px 0">Ma'lumot yo'q</div>`;
+    const userRows = (r.byUser||[]).slice(0,10).map(u=>`
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border)">
+        <div><div style="font-size:14px;font-weight:500">${u.name||'—'}</div><div style="font-size:12px;color:var(--hint)">${u.count} ta qabul</div></div>
+        <div style="font-size:15px;font-weight:700;color:var(--btn)">${(u.revenue||0).toLocaleString()} so'm</div>
+      </div>`).join('') || `<div style="font-size:13px;color:var(--hint);padding:8px 0">Ma'lumot yo'q</div>`;
+    el.innerHTML = `
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:12px 0">
+        <div style="grid-column:span 2;background:linear-gradient(135deg,rgba(48,209,88,.15),rgba(10,132,255,.1));border:1px solid rgba(48,209,88,.28);border-radius:16px;padding:18px;text-align:center">
+          <div style="font-size:11px;color:var(--hint);text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px">Umumiy daromad</div>
+          <div style="font-size:34px;font-weight:800;letter-spacing:-1px;color:var(--green);line-height:1">${(r.totalRevenue||0).toLocaleString()}</div>
+          <div style="font-size:12px;color:var(--hint);margin-top:3px">so'm</div>
+        </div>
+        <div class="card" style="margin:0;text-align:center"><div style="font-size:11px;color:var(--hint);margin-bottom:4px">Bugun</div><div style="font-size:22px;font-weight:700;color:var(--green)">${(r.today||0).toLocaleString()}</div><div style="font-size:10px;color:var(--hint)">so'm</div></div>
+        <div class="card" style="margin:0;text-align:center"><div style="font-size:11px;color:var(--hint);margin-bottom:4px">Bu oy</div><div style="font-size:22px;font-weight:700;color:var(--btn)">${(r.thisMonth||0).toLocaleString()}</div><div style="font-size:10px;color:var(--hint)">so'm</div></div>
+        <div class="card" style="margin:0;text-align:center"><div style="font-size:11px;color:var(--hint);margin-bottom:4px">O'tgan oy</div><div style="font-size:22px;font-weight:700;color:var(--hint)">${(r.lastMonth||0).toLocaleString()}</div><div style="font-size:10px;color:var(--hint)">so'm</div></div>
+        <div class="card" style="margin:0;text-align:center"><div style="font-size:11px;color:var(--hint);margin-bottom:4px">Kelmadi</div><div style="font-size:22px;font-weight:700;color:var(--red)">${r.noShowCount||0}</div><div style="font-size:10px;color:var(--hint)">bemor</div></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">
+        <div style="background:rgba(255,159,10,.1);border:1px solid rgba(255,159,10,.2);border-radius:12px;padding:12px;text-align:center">
+          <div style="font-size:20px;font-weight:700;color:var(--orange)">${r.partialCount||0}</div>
+          <div style="font-size:11px;color:var(--hint)">Qisman to'landi</div>
+        </div>
+        <div style="background:rgba(255,69,58,.08);border:1px solid rgba(255,69,58,.15);border-radius:12px;padding:12px;text-align:center">
+          <div style="font-size:20px;font-weight:700;color:var(--red)">${r.unpaidCount||0}</div>
+          <div style="font-size:11px;color:var(--hint)">To'lanmadi</div>
+        </div>
+      </div>
+      <div class="card" style="margin-bottom:10px">
+        <div style="font-weight:600;font-size:14px;margin-bottom:10px">🦷 Xizmatlar bo'yicha</div>${svcRows}
+      </div>
+      <div class="card">
+        <div style="font-weight:600;font-size:14px;margin-bottom:10px">👥 Mijozlar (Top 10)</div>${userRows}
+      </div>`;
+  } catch(e) { el.innerHTML = `<p style="color:var(--red);text-align:center;margin-top:48px;font-size:13px">${e.message}</p>`; }
+}
+
 let monthChart = null, ratingChart = null;
 async function loadStats() {
   const el = document.getElementById('stats-content');
@@ -398,7 +460,7 @@ async function onSearch(val) {
 }
 
 const DAY_LABELS = ['','Du','Se','Ch','Pa','Ju','Sh','Ya'];
-let scheduleData=null, clinicData=null, pendingHours=null;
+let scheduleData=null, clinicData=null, pendingHours=null, servicesData=[];
 
 function allTimeSlots() {
   const s=[];
@@ -449,7 +511,7 @@ async function loadSettings() {
   const el=document.getElementById('settings-content');
   el.innerHTML='<div class="spin"></div>';
   try {
-    [scheduleData,clinicData]=await Promise.all([api('/schedule'),api('/settings')]);
+    [scheduleData,clinicData,servicesData]=await Promise.all([api('/schedule'),api('/settings'),api('/services').catch(()=>[])]);
     pendingHours=[...scheduleData.workHours];
     renderSettings();
   } catch(e) { el.innerHTML=`<p style="color:var(--red);text-align:center;margin-top:48px;font-size:13px">${e.message}</p>`; }
@@ -484,6 +546,19 @@ function renderSettings() {
     <label class="f-lbl">Telegram</label><input class="f-inp" id="cf-tg" value="${clinicData.telegram||''}" placeholder="@username"/>
     <label class="f-lbl">Xarita URL</label><input class="f-inp" id="cf-maps" value="${clinicData.mapsUrl||''}" placeholder="https://maps.app.goo.gl/..."/>
     <button class="btn-p" onclick="saveClinicInfo()">💾 Saqlash</button>
+  </div>
+  <div class="sec-t">🦷 Xizmatlar narxi</div>
+  <div class="card" style="margin-bottom:20px">
+    ${servicesData.length ? servicesData.map(s=>{
+      const p=parseInt(String(s.price||0).replace(/\D/g,''))||0;
+      return `<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--border)">
+        <div><div style="font-size:14px;font-weight:500">${s.emoji||'🦷'} ${s.name}</div><div style="font-size:11px;color:var(--hint)">${s.isActive?'Faol':'Nofaol'}</div></div>
+        <div id="svc-price-${s.id}" style="display:flex;align-items:center;gap:8px">
+          <span style="font-size:14px;font-weight:600;color:var(--green)">${p?p.toLocaleString()+' so\'m':'—'}</span>
+          <button class="btn-p btn-sm" onclick="editSvcPrice(${s.id})">✏️</button>
+        </div>
+      </div>`;
+    }).join('') : '<div style="font-size:13px;color:var(--hint);padding:10px 0">Xizmatlar yo\'q</div>'}
   </div>`;
 }
 
@@ -512,7 +587,7 @@ async function saveClinicInfo() {
   catch(e){showCustomAlert('❌ '+e.message);}
 }
 
-const TABS=['today','apts','stats','reviews','search','settings','sub'];
+const TABS=['today','apts','revenue','stats','reviews','search','settings','sub'];
 let curTab='today';
 const loaded={};
 function switchTab(tab){
@@ -520,7 +595,7 @@ function switchTab(tab){
   TABS.forEach(t=>{ document.getElementById('sec-'+t).classList.toggle('active',t===tab); document.getElementById('tab-'+t).classList.toggle('on',t===tab); });
   if(!loaded[tab]){loaded[tab]=true;loadTabFn(tab);}
 }
-function loadTabFn(tab){ if(tab==='today')loadToday(); else if(tab==='apts')loadApts(); else if(tab==='stats')loadStats(); else if(tab==='reviews')loadReviews(); else if(tab==='settings')loadSettings(); else if(tab==='sub')loadSub(); }
+function loadTabFn(tab){ if(tab==='today')loadToday(); else if(tab==='apts')loadApts(); else if(tab==='revenue')loadRevenue(); else if(tab==='stats')loadStats(); else if(tab==='reviews')loadReviews(); else if(tab==='settings')loadSettings(); else if(tab==='sub')loadSub(); }
 function refreshTab(){ delete loaded[curTab]; loadTabFn(curTab); }
 loaded['today']=true; loadToday();
 
@@ -566,6 +641,139 @@ async function loadSub(){
       </div>
       ${plansHtml}`;
   }catch(e){el.innerHTML='<div style="color:var(--red);padding:20px;text-align:center">Yuklashda xato</div>';}
+}
+
+function editSvcPrice(id) {
+  const s=servicesData.find(x=>x.id===id); if(!s) return;
+  const p=parseInt(String(s.price||0).replace(/\D/g,''))||0;
+  document.getElementById('svc-price-'+id).innerHTML=
+    `<input type="number" class="f-inp" id="svc-p-${id}" value="${p||''}" placeholder="Narx..." style="width:100px;margin:0;padding:8px 10px"/><button class="btn-p btn-sm" onclick="saveSvcPrice(${id})">✓</button>`;
+}
+async function saveSvcPrice(id) {
+  const val=document.getElementById('svc-p-'+id)?.value||'0';
+  const p=parseInt(val)||0;
+  try {
+    await api('/services/'+id,{method:'PUT',body:JSON.stringify({price:p.toString()})});
+    const idx=servicesData.findIndex(s=>s.id===id);
+    if(idx>=0) servicesData[idx].price=p.toString();
+    renderSettings();
+    showCustomAlert('✅ Narx saqlandi');
+  } catch(e){showCustomAlert('❌ '+e.message);}
+}
+
+// ── Appointment Detail ───────────────────────────────────────────────
+let aptDetailId=null, aptDetailData=null, allAdminServices=[], payFormItems=[];
+
+async function openAptDetail(id) {
+  aptDetailId=id; payFormItems=[];
+  document.getElementById('apt-detail-sheet').classList.remove('hidden');
+  document.getElementById('apt-detail-content').innerHTML='<div class="spin"></div>';
+  try {
+    const [det,svcs]=await Promise.all([api('/appointments/'+id+'/detail'),api('/services').catch(()=>[])]);
+    aptDetailData=det;
+    allAdminServices=(svcs||[]).filter(s=>parseInt(String(s.price||0).replace(/\D/g,''))>0);
+    _showDetailView();
+  } catch(e){ document.getElementById('apt-detail-content').innerHTML=`<p style="color:var(--red);text-align:center;padding:20px">${e.message}</p>`; }
+}
+
+function closeAptDetail() {
+  document.getElementById('apt-detail-sheet').classList.add('hidden');
+  aptDetailId=null; aptDetailData=null; payFormItems=[];
+}
+
+function _showDetailView() {
+  const a=aptDetailData.appointment;
+  const pay=aptDetailData.payment;
+  const parts=(a.timeSlot?.date||'').split('-');
+  const [y,m,d]=[parts[0]||'?',parts[1]||'?',parts[2]||'?'];
+  const st=a.status||'confirmed';
+  const c=CLR[st]||'#0a84ff';
+  const ini=(a.clientName||'?').split(' ').slice(0,2).map(w=>w[0]||'').join('').toUpperCase()||'?';
+  const att=a.attendanceStatus==='showed'
+    ?`<div style="font-size:13px;color:var(--green);margin-top:5px">✅ Bemor keldi</div>`
+    :a.attendanceStatus==='no_show'
+    ?`<div style="font-size:13px;color:var(--red);margin-top:5px">❌ Bemor kelmadi</div>`:'';
+  let payHtml;
+  if(pay){
+    const pc=pay.status==='paid'?'var(--green)':pay.status==='partial'?'var(--orange)':'var(--red)';
+    const pl=pay.status==='paid'?"✅ To'langan":pay.status==='partial'?"⚠️ Qisman":"❌ To'lanmagan";
+    const items=(pay.items||[]).map(it=>`<div style="display:flex;justify-content:space-between;font-size:13px;padding:5px 0;border-bottom:1px solid var(--border)"><span>${it.serviceName}</span><b>${(it.price||0).toLocaleString()} so'm</b></div>`).join('');
+    payHtml=`<div class="sec-t">To'lov holati</div><div class="card" style="margin:0">
+      <div style="display:flex;justify-content:space-between;margin-bottom:8px"><b style="color:${pc}">${pl}</b><span style="font-size:13px;color:var(--hint)">${(pay.paidAmount||0).toLocaleString()} / ${(pay.totalAmount||0).toLocaleString()} so'm</span></div>
+      ${items}${pay.reason?`<div style="font-size:12px;color:var(--hint);margin-top:6px">📝 ${pay.reason}</div>`:''}
+    </div>`;
+  } else {
+    payHtml=`<button class="btn-p" style="margin-top:14px;width:100%" onclick="_initPayForm()">💰 To'lov qo'shish</button>`;
+  }
+  document.getElementById('apt-detail-content').innerHTML=`
+    <div style="display:flex;gap:12px;align-items:center;margin-bottom:14px">
+      <div class="apt-av" style="background:${c}1a;color:${c};width:46px;height:46px;border-radius:14px;flex-shrink:0">${ini}</div>
+      <div style="flex:1;min-width:0"><div style="font-weight:700;font-size:16px">${a.clientName||'—'}</div>${a.clientPhone?`<div style="font-size:13px;color:var(--hint)">${a.clientPhone}</div>`:''}</div>
+      <span class="pill" style="background:${c}1a;color:${c};flex-shrink:0">${LBL[st]||st}</span>
+    </div>
+    <div style="background:var(--bg3);border-radius:12px;padding:12px;border:1px solid var(--border);margin-bottom:4px">
+      <div style="font-size:14px">🦷 ${a.service?.name||'—'}</div>
+      <div style="font-size:14px;margin-top:4px">📅 ${d}.${m}.${y}&nbsp;&nbsp;⏰ ${fmtTime(a.timeSlot?.time||'')}</div>
+      ${att}
+    </div>
+    ${payHtml}`;
+}
+
+function _initPayForm() {
+  payFormItems=[];
+  const svc=aptDetailData?.appointment?.service;
+  if(svc){ const p=parseInt(String(svc.price||0).replace(/\D/g,''))||0; if(p>0) payFormItems=[{serviceName:svc.name,price:p}]; }
+  _showPayForm();
+}
+
+function _showPayForm() {
+  const total=payFormItems.reduce((s,i)=>s+i.price,0);
+  const itemsHtml=payFormItems.map((it,idx)=>`
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid var(--border)">
+      <span style="font-size:13px;flex:1">${it.serviceName}</span>
+      <div style="display:flex;align-items:center;gap:6px;flex-shrink:0">
+        <span style="font-size:13px;font-weight:600">${it.price.toLocaleString()} so'm</span>
+        <button onclick="removePayItem(${idx})" style="background:none;border:none;color:var(--red);font-size:20px;cursor:pointer;padding:0 4px;line-height:1">×</button>
+      </div>
+    </div>`).join('') || `<div style="font-size:13px;color:var(--hint);padding:6px 0">Hali xizmat qo'shilmagan</div>`;
+  const chips=allAdminServices.map((s,i)=>{
+    const p=parseInt(String(s.price||0).replace(/\D/g,''))||0;
+    return `<span class="chip chip-sm" onclick="addPayItem(${i})">${s.emoji||'🦷'} ${s.name} · ${p.toLocaleString()}</span>`;
+  }).join('');
+  document.getElementById('apt-detail-content').innerHTML=`
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+      <button class="btn-g btn-sm" onclick="_showDetailView()">← Orqaga</button>
+      <div style="font-weight:600;font-size:15px">To'lov qo'shish</div>
+    </div>
+    <div class="sec-t">Qo'shilgan xizmatlar</div>
+    <div style="margin-bottom:10px">${itemsHtml}</div>
+    ${chips?`<div class="sec-t">Xizmat qo'shish</div><div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px">${chips}</div>`:''}
+    <div style="font-size:16px;font-weight:700;margin:12px 0">Jami: <span style="color:var(--green)">${total.toLocaleString()} so'm</span></div>
+    <div style="display:flex;flex-direction:column;gap:8px">
+      <button class="btn-p" onclick="submitPay('paid')">✅ To'liq to'landi</button>
+      <button class="btn-g" onclick="togglePartialInput()">⚠️ Qisman to'landi</button>
+      <button class="btn-r" onclick="submitPay('unpaid')">❌ To'lanmadi</button>
+    </div>
+    <div id="partial-wrap" style="display:none;margin-top:10px">
+      <label class="f-lbl">To'langan miqdor (so'm)</label>
+      <input class="f-inp" type="number" id="partial-amt" placeholder="Masalan: 50000"/>
+      <button class="btn-p" onclick="submitPartialPay()">✅ Tasdiqlash</button>
+    </div>`;
+}
+
+function addPayItem(i){ const s=allAdminServices[i]; if(!s)return; const p=parseInt(String(s.price||0).replace(/\D/g,''))||0; payFormItems.push({serviceName:s.name,price:p}); _showPayForm(); }
+function removePayItem(idx){ payFormItems.splice(idx,1); _showPayForm(); }
+function togglePartialInput(){ const w=document.getElementById('partial-wrap'); w.style.display=w.style.display==='none'?'block':'none'; }
+async function submitPartialPay(){ const amt=parseInt(document.getElementById('partial-amt').value)||0; if(!amt){showCustomAlert('Miqdorni kiriting');return;} await submitPay('partial',amt); }
+async function submitPay(status,paidAmt) {
+  if(!aptDetailId) return;
+  if(!payFormItems.length){showCustomAlert("Kamida bitta xizmat qo'shing");return;}
+  const total=payFormItems.reduce((s,i)=>s+i.price,0);
+  const paid=status==='paid'?total:(status==='partial'?(paidAmt||0):0);
+  try {
+    await api('/visit-payments',{method:'POST',body:JSON.stringify({appointmentId:aptDetailId,items:payFormItems,totalAmount:total,paidAmount:paid,status})});
+    showCustomAlert("✅ To'lov saqlandi"); closeAptDetail(); refreshTab();
+  } catch(e){showCustomAlert('❌ '+e.message);}
 }
 
 async function selectPlan(planId){

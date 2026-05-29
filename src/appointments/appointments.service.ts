@@ -197,6 +197,32 @@ export class AppointmentsService {
     return rows.map(r => ({ month: r.month, count: r.cnt }));
   }
 
+  async getPendingAttendanceChecks(clinicId: number): Promise<Appointment[]> {
+    const now = new Date();
+    const cutoff = new Date(now.getTime() - 30 * 60 * 1000);
+    const todayStr = uzDateStr(uzNow());
+    const candidates = await this.appointmentsRepo.find({
+      where: { clinic: { id: clinicId }, status: AppointmentStatus.CONFIRMED, attendanceCheckSent: false, timeSlot: { date: todayStr } },
+      relations: ['user', 'service', 'timeSlot'],
+    });
+    return candidates.filter((apt) => {
+      const aptTime = new Date(`${apt.timeSlot.date}T${apt.timeSlot.time}:00+05:00`);
+      return aptTime <= cutoff;
+    });
+  }
+
+  async markAttendanceCheckSent(id: number): Promise<void> {
+    await this.appointmentsRepo.update(id, { attendanceCheckSent: true });
+  }
+
+  async markAttendanceStatus(id: number, status: 'showed' | 'no_show'): Promise<void> {
+    await this.appointmentsRepo.update(id, { attendanceStatus: status });
+  }
+
+  async getNoShowCount(clinicId: number): Promise<number> {
+    return this.appointmentsRepo.count({ where: { clinic: { id: clinicId }, attendanceStatus: 'no_show' } });
+  }
+
   async getStats(clinicId: number): Promise<{ total: number; confirmed: number; cancelled: number; completed: number }> {
     const nowUzStr = uzDateStr(uzNow()) + ' ' + `${String(uzNow().getUTCHours()).padStart(2, '0')}:${String(uzNow().getUTCMinutes()).padStart(2, '0')}`;
 

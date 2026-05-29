@@ -1,5 +1,5 @@
 import {
-  Controller, Get, Post, Put, Param, Body, Query,
+  Controller, Get, Post, Put, Delete, Param, Body, Query,
   Headers, UnauthorizedException, BadRequestException, ParseIntPipe,
 } from '@nestjs/common';
 import { createHmac } from 'crypto';
@@ -14,6 +14,9 @@ import { ClinicBotsService } from '../clinic-bots/clinic-bots.service';
 import { PlansService } from '../plans/plans.service';
 import { PromosService } from '../promos/promos.service';
 import { PaymentsService } from '../payments/payments.service';
+import { ServicesService } from '../services/services.service';
+import { VisitPaymentsService } from '../visit-payments/visit-payments.service';
+import { VisitPaymentStatus } from '../database/entities/visit-payment.entity';
 import { ClinicStatus } from '../database/entities/clinic.entity';
 
 @Controller('api/admin')
@@ -30,6 +33,8 @@ export class AdminApiController {
     private readonly plansService: PlansService,
     private readonly promosService: PromosService,
     private readonly paymentsService: PaymentsService,
+    private readonly servicesService: ServicesService,
+    private readonly visitPaymentsService: VisitPaymentsService,
   ) {}
 
   private async validateAdmin(initData: string, clinicIdHeader: string): Promise<number> {
@@ -287,5 +292,126 @@ export class AdminApiController {
     );
 
     return { ok: true };
+  }
+
+  // ── Services management ──────────────────────────────────────────
+
+  @Get('services')
+  async getServices(
+    @Headers('x-init-data') initData: string,
+    @Headers('x-clinic-id') clinicIdHeader: string,
+  ) {
+    const clinicId = await this.validateAdmin(initData, clinicIdHeader);
+    return this.servicesService.findAllAdmin(clinicId);
+  }
+
+  @Post('services')
+  async createService(
+    @Headers('x-init-data') initData: string,
+    @Headers('x-clinic-id') clinicIdHeader: string,
+    @Body() body: { name: string; emoji?: string; price?: string; description?: string },
+  ) {
+    const clinicId = await this.validateAdmin(initData, clinicIdHeader);
+    if (!body.name?.trim()) throw new BadRequestException('Xizmat nomi kiritilmagan');
+    return this.servicesService.create(clinicId, body.name.trim(), body.emoji || '🦷', body.price, body.description);
+  }
+
+  @Put('services/:id')
+  async updateService(
+    @Headers('x-init-data') initData: string,
+    @Headers('x-clinic-id') clinicIdHeader: string,
+    @Param('id', ParseIntPipe) id: number,
+    @Body() body: { name?: string; emoji?: string; price?: string; description?: string; isActive?: boolean; sortOrder?: number },
+  ) {
+    const clinicId = await this.validateAdmin(initData, clinicIdHeader);
+    const svc = await this.servicesService.findById(id, clinicId);
+    if (!svc) throw new BadRequestException('Topilmadi');
+    await this.servicesService.update(id, body);
+    return { ok: true };
+  }
+
+  @Delete('services/:id')
+  async deleteService(
+    @Headers('x-init-data') initData: string,
+    @Headers('x-clinic-id') clinicIdHeader: string,
+    @Param('id', ParseIntPipe) id: number,
+  ) {
+    const clinicId = await this.validateAdmin(initData, clinicIdHeader);
+    const svc = await this.servicesService.findById(id, clinicId);
+    if (!svc) throw new BadRequestException('Topilmadi');
+    await this.servicesService.remove(id);
+    return { ok: true };
+  }
+
+  // ── Visit payments ───────────────────────────────────────────────
+
+  @Get('visit-payments')
+  async getVisitPayments(
+    @Headers('x-init-data') initData: string,
+    @Headers('x-clinic-id') clinicIdHeader: string,
+  ) {
+    const clinicId = await this.validateAdmin(initData, clinicIdHeader);
+    return this.visitPaymentsService.findByClinic(clinicId);
+  }
+
+  @Post('visit-payments')
+  async createVisitPayment(
+    @Headers('x-init-data') initData: string,
+    @Headers('x-clinic-id') clinicIdHeader: string,
+    @Body() body: {
+      appointmentId?: number;
+      items: { serviceName: string; price: number }[];
+      paidAmount: number;
+      status: string;
+      reason?: string;
+    },
+  ) {
+    const clinicId = await this.validateAdmin(initData, clinicIdHeader);
+    if (!body.items?.length) throw new BadRequestException('Xizmatlar kiritilmagan');
+    const validStatuses = ['paid', 'partial', 'unpaid'];
+    if (!validStatuses.includes(body.status)) throw new BadRequestException('Noto\'g\'ri status');
+
+    let userId: number | undefined;
+    if (body.appointmentId) {
+      const existing = await this.visitPaymentsService.hasPaymentForAppointment(body.appointmentId);
+      if (existing) throw new BadRequestException('Bu qabul uchun to\'lov allaqachon mavjud');
+      const apt = await this.appointmentsService.findById(body.appointmentId);
+      userId = apt?.user?.id;
+    }
+
+    const totalAmount = body.items.reduce((s, i) => s + i.price, 0);
+    return this.visitPaymentsService.create({
+      clinicId,
+      appointmentId: body.appointmentId,
+      userId,
+      items: body.items,
+      totalAmount,
+      paidAmount: body.paidAmount,
+      status: body.status as VisitPaymentStatus,
+      reason: body.reason,
+    });
+  }
+
+  @Get('revenue')
+  async getRevenue(
+    @Headers('x-init-data') initData: string,
+    @Headers('x-clinic-id') clinicIdHeader: string,
+  ) {
+    const clinicId = await this.validateAdmin(initData, clinicIdHeader);
+    const noShowCount = await this.appointmentsService.getNoShowCount(clinicId);
+    return this.visitPaymentsService.getRevenueStats(clinicId, noShowCount);
+  }
+
+  @Get('appointments/:id/detail')
+  async getAppointmentDetail(
+    @Headers('x-init-data') initData: string,
+    @Headers('x-clinic-id') clinicIdHeader: string,
+    @Param('id', ParseIntPipe) id: number,
+  ) {
+    const clinicId = await this.validateAdmin(initData, clinicIdHeader);
+    const apt = await this.appointmentsService.findById(id);
+    if (!apt || apt.clinic.id !== clinicId) throw new BadRequestException('Topilmadi');
+    const payment = await this.visitPaymentsService.findByAppointment(id);
+    return { appointment: apt, payment };
   }
 }

@@ -7,6 +7,7 @@ import { ClinicBotsService } from '../clinic-bots/clinic-bots.service';
 import { SuperAdminBotService } from '../super-admin/super-admin-bot.service';
 import { PromosService } from '../promos/promos.service';
 import { PlansService } from '../plans/plans.service';
+import { VisitPaymentsService } from '../visit-payments/visit-payments.service';
 import { ClinicStatus } from '../database/entities/clinic.entity';
 import { fmtTime } from '../bot/keyboards/calendar.keyboard';
 
@@ -21,6 +22,7 @@ export class NotificationsService {
     private readonly superAdminBotService: SuperAdminBotService,
     private readonly promosService: PromosService,
     private readonly plansService: PlansService,
+    private readonly visitPaymentsService: VisitPaymentsService,
   ) {}
 
   @Cron('*/10 * * * *')
@@ -192,6 +194,64 @@ export class NotificationsService {
       }
       await this.promosService.markNotified(promo.id);
       this.logger.log(`Promo #${promo.id} "${promo.title}" haqida xabar yuborildi`);
+    }
+  }
+
+  // ── Attendance check (every 5 min) ──────────────────────────────
+  @Cron('*/5 * * * *')
+  async sendAttendanceChecks() {
+    const clinics = await this.clinicsService.findActive();
+    for (const clinic of clinics) {
+      const appointments = await this.appointmentsService.getPendingAttendanceChecks(clinic.id);
+      for (const apt of appointments) {
+        try {
+          const [y, m, d] = apt.timeSlot.date.split('-');
+          const text = `👤 *${apt.clientName}* — ${apt.service?.name || '?'}\n📅 ${d}.${m}.${y} soat ${apt.timeSlot.time}\n\nBemor keldimi?`;
+          await this.notifyClinicAdmins(clinic, text, {
+            reply_markup: {
+              inline_keyboard: [[
+                { text: '✅ Keldi', callback_data: `adm:attend:${apt.id}:showed` },
+                { text: '❌ Kelmadi', callback_data: `adm:attend:${apt.id}:noshow` },
+              ]],
+            },
+          });
+          await this.appointmentsService.markAttendanceCheckSent(apt.id);
+        } catch (err) {
+          this.logger.error(`Attendance check yuborishda xato: ${err.message}`);
+        }
+      }
+    }
+  }
+
+  // ── Daily report (21:00 Tashkent = 16:00 UTC) ───────────────────
+  @Cron('0 16 * * *')
+  async sendDailyReports() {
+    const clinics = await this.clinicsService.findActive();
+    const uzNow = new Date(Date.now() + 5 * 3600000);
+    const todayStr = uzNow.toISOString().split('T')[0];
+    const [ty, tm, td] = todayStr.split('-');
+    const dateLabel = `${td}.${tm}.${ty}`;
+
+    for (const clinic of clinics) {
+      try {
+        const todayApts = await this.appointmentsService.findTodayAppointments(clinic.id);
+        const noShowCount = todayApts.filter(a => a.attendanceStatus === 'no_show').length;
+        const showedCount = todayApts.filter(a => a.attendanceStatus === 'showed').length;
+        const dailyStats = await this.visitPaymentsService.getDailyStats(clinic.id, todayStr);
+
+        const text =
+          `📊 *${dateLabel} — Kunlik hisobot*\n\n` +
+          `📋 Jami qabullar: *${todayApts.length}* ta\n` +
+          `✅ Keldi: *${showedCount}* ta\n` +
+          `❌ Kelmadi: *${noShowCount}* ta\n\n` +
+          `💰 To'landi: *${dailyStats.paid}* ta — ${dailyStats.paidAmount.toLocaleString()} so'm\n` +
+          `💳 Qisman: *${dailyStats.partial}* ta — ${dailyStats.partialAmount.toLocaleString()} so'm\n` +
+          `📭 To'lanmadi: *${dailyStats.unpaid}* ta`;
+
+        await this.notifyClinicAdmins(clinic, text);
+      } catch (err) {
+        this.logger.error(`Daily report yuborishda xato: ${err.message}`);
+      }
     }
   }
 

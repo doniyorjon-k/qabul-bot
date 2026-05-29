@@ -28,14 +28,14 @@ export class ServicesService {
     });
   }
 
-  async create(clinicId: number, name: string, emoji: string): Promise<Service> {
+  async create(clinicId: number, name: string, emoji: string, price?: string, description?: string): Promise<Service> {
     const count = await this.servicesRepo.count({ where: { clinic: { id: clinicId } } });
     return this.servicesRepo.save(
-      this.servicesRepo.create({ name, emoji, sortOrder: count + 1, clinic: { id: clinicId } as any }),
+      this.servicesRepo.create({ name, emoji, price, description, sortOrder: count + 1, clinic: { id: clinicId } as any }),
     );
   }
 
-  async update(id: number, data: Partial<Pick<Service, 'name' | 'emoji' | 'isActive'>>): Promise<void> {
+  async update(id: number, data: Partial<Pick<Service, 'name' | 'emoji' | 'isActive' | 'price' | 'description' | 'sortOrder'>>): Promise<void> {
     await this.servicesRepo.update(id, data);
   }
 

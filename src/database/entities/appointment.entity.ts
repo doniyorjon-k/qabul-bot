@@ -62,6 +62,12 @@ export class Appointment {
   @Column({ type: 'text', nullable: true })
   cancelReason: string | null;
 
+  @Column({ default: false })
+  attendanceCheckSent: boolean;
+
+  @Column({ type: 'varchar', length: 20, default: 'unknown' })
+  attendanceStatus: string;
+
   @CreateDateColumn()
   createdAt: Date;
 }

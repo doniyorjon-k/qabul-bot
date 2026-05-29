@@ -6,9 +6,10 @@ import { ClinicBotsModule } from '../clinic-bots/clinic-bots.module';
 import { SuperAdminBotModule } from '../super-admin/super-admin-bot.module';
 import { PromosModule } from '../promos/promos.module';
 import { PlansModule } from '../plans/plans.module';
+import { VisitPaymentsModule } from '../visit-payments/visit-payments.module';
 
 @Module({
-  imports: [AppointmentsModule, ClinicsModule, ClinicBotsModule, SuperAdminBotModule, PromosModule, PlansModule],
+  imports: [AppointmentsModule, ClinicsModule, ClinicBotsModule, SuperAdminBotModule, PromosModule, PlansModule, VisitPaymentsModule],
   providers: [NotificationsService],
 })
 export class NotificationsModule {}
