@@ -259,7 +259,13 @@ export class SuperAdminApiController {
     const json: any = await getFileRes.json();
     if (!json.ok) throw new BadRequestException('Telegram faylni topamadi');
     const fileUrl = `https://api.telegram.org/file/bot${clinicToken}/${json.result.file_path}`;
-    res.redirect(fileUrl);
+    // Proxy through server — redirect causes CORS errors in browser fetch
+    const fileRes = await fetch(fileUrl);
+    if (!fileRes.ok) throw new BadRequestException('Faylni yuklab bo\'lmadi');
+    const buf = Buffer.from(await fileRes.arrayBuffer());
+    res.setHeader('Content-Type', fileRes.headers.get('content-type') || 'image/jpeg');
+    res.setHeader('Cache-Control', 'private, max-age=3600');
+    res.send(buf);
   }
 
   @Post('payments/:id/confirm')

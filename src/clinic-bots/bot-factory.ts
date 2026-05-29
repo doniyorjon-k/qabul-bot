@@ -99,6 +99,9 @@ export function setupBotHandlers(
   superAdminIds: number[] = [],
   adminOnly = false,
 ) {
+  // Token of the bot that receives photos from admins — needed for getFile
+  const currentBotToken = adminOnly ? (clinic.adminBotToken || clinic.botToken) : clinic.botToken;
+
   const adminIds = new Set<number>(clinic.adminIds);
   const isAdmin = (userId: number) => adminIds.has(userId);
 
@@ -1490,7 +1493,7 @@ export function setupBotHandlers(
         `📋 Reja: *${plan?.name || ''}* (${plan?.durationDays || ''} kun)\n` +
         `💰 Summa: *${(aSess.payAmount ?? plan?.price ?? 0).toLocaleString()} so\'m*\n` +
         `👤 Admin Telegram ID: ${ctx.from.id}`;
-      await notifySuperAdminPhoto(fileId, capText, superAdminIds, appUrl ? `${appUrl}/super-admin` : '');
+      await notifySuperAdminPhoto(fileId, capText, superAdminIds, appUrl ? `${appUrl}/super-admin` : '', currentBotToken);
       return;
     }
 
@@ -1716,19 +1719,53 @@ function fmtDate(dateStr: string): string {
   return `${d}.${m}.${y}`;
 }
 
-async function notifySuperAdminPhoto(fileId: string, caption: string, superAdminIds: number[], miniAppUrl = '') {
+async function notifySuperAdminPhoto(
+  fileId: string,
+  caption: string,
+  superAdminIds: number[],
+  miniAppUrl = '',
+  clinicBotToken = '',
+) {
   const token = process.env.SUPER_ADMIN_BOT_TOKEN;
   if (!token || !superAdminIds.length) return;
-  const replyMarkup = miniAppUrl
-    ? { inline_keyboard: [[{ text: "💳 To'lovlarni ko'rish", web_app: { url: `${miniAppUrl}?tab=payments` } }]] }
-    : undefined;
+
+  // file_id is scoped to the clinic bot — download it first, then re-upload via super admin bot
+  let photoBuffer: Buffer | null = null;
+  if (clinicBotToken) {
+    try {
+      const gf = await fetch(`https://api.telegram.org/bot${clinicBotToken}/getFile?file_id=${fileId}`);
+      const gfJson: any = await gf.json();
+      if (gfJson.ok) {
+        const dl = await fetch(`https://api.telegram.org/file/bot${clinicBotToken}/${gfJson.result.file_path}`);
+        if (dl.ok) photoBuffer = Buffer.from(await dl.arrayBuffer());
+      }
+    } catch {}
+  }
+
+  // Only add web_app button when URL is HTTPS (Telegram rejects non-HTTPS web_app URLs)
+  const safeUrl = miniAppUrl?.startsWith('https://') ? miniAppUrl : '';
+  const replyMarkupStr = safeUrl
+    ? JSON.stringify({ inline_keyboard: [[{ text: "💳 To'lovlarni ko'rish", web_app: { url: `${safeUrl}?tab=payments` } }]] })
+    : null;
+
   for (const id of superAdminIds) {
     try {
-      await fetch(`https://api.telegram.org/bot${token}/sendPhoto`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ chat_id: id, photo: fileId, caption, parse_mode: 'Markdown', ...(replyMarkup ? { reply_markup: replyMarkup } : {}) }),
-      });
+      if (photoBuffer) {
+        const form = new FormData();
+        form.append('chat_id', String(id));
+        form.append('caption', caption);
+        form.append('parse_mode', 'Markdown');
+        if (replyMarkupStr) form.append('reply_markup', replyMarkupStr);
+        form.append('photo', new Blob([photoBuffer.buffer as ArrayBuffer], { type: 'image/jpeg' }), 'screenshot.jpg');
+        await fetch(`https://api.telegram.org/bot${token}/sendPhoto`, { method: 'POST', body: form });
+      } else {
+        // Fallback: text-only if photo download failed
+        await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ chat_id: id, text: caption, parse_mode: 'Markdown', ...(replyMarkupStr ? { reply_markup: JSON.parse(replyMarkupStr) } : {}) }),
+        });
+      }
     } catch {}
   }
 }
