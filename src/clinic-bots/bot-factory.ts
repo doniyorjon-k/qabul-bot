@@ -1,5 +1,5 @@
 import { Telegraf, Markup } from 'telegraf';
-import { Clinic } from '../database/entities/clinic.entity';
+import { Clinic, ClinicStatus } from '../database/entities/clinic.entity';
 import { AppointmentStatus } from '../database/entities/appointment.entity';
 import { UsersService } from '../users/users.service';
 import { ServicesService } from '../services/services.service';
@@ -130,6 +130,25 @@ export function setupBotHandlers(
 
   // ── /admin buyrug'i URL (used by both /admin command and adm:back) ─
   const miniAppUrl = appUrl ? `${appUrl}/admin/?clinicId=${clinicId}` : undefined;
+
+  // ── Expired/suspended guard (user bot only) ───────────────────────
+  if (!adminOnly) {
+    bot.use(async (ctx, next) => {
+      const userId = ctx.from?.id;
+      if (!userId) return next();
+      if (isAdmin(userId)) return next();
+      const current = await services.clinicsService.findById(clinicId);
+      if (current?.status === ClinicStatus.EXPIRED || current?.status === ClinicStatus.SUSPENDED) {
+        if ('callback_query' in ctx.update) {
+          await (ctx as any).answerCbQuery('Bot vaqtincha to\'xtatilgan');
+        } else {
+          await ctx.reply('⛔ Bot vaqtincha to\'xtatilgan.\n\nBatafsil ma\'lumot uchun @doniyorjon_k ga murojaat qiling.');
+        }
+        return;
+      }
+      return next();
+    });
+  }
 
   // ── /start ────────────────────────────────────────────────────────
   bot.start(async (ctx) => {

@@ -157,8 +157,7 @@ export class NotificationsService {
             { parse_mode: 'Markdown', ...expiredKb },
           );
           await this.clinicsService.update(clinic.id, { status: ClinicStatus.EXPIRED });
-          await this.clinicBotsService.stopUserBot(clinic.id);
-          this.logger.log(`Clinic ${clinic.id} EXPIRED — user bot to'xtatildi, admin bot ishlaydi`);
+          this.logger.log(`Clinic ${clinic.id} EXPIRED — obuna tugadi, bot to'lov kutmoqda`);
           await this.superAdminBotService.notify(
             `🚨 *Klinika tugadi!*\n\n🏥 ${clinic.name} (ID: ${clinic.id})\n\nObuna to'lanmadi — bot to'xtatildi.`,
             { parse_mode: 'Markdown' },
