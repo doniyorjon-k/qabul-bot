@@ -685,8 +685,15 @@ export function setupBotHandlers(
 
   bot.action('pay:cancel', async (ctx) => {
     await ctx.answerCbQuery();
+    if (!isAdmin(ctx.from.id)) return;
     delASess(ctx.from.id);
-    await ctx.editMessageText('❌ To\'lov bekor qilindi.');
+    const current = await services.clinicsService.findById(clinicId);
+    if (current?.status === ClinicStatus.EXPIRED || current?.status === ClinicStatus.SUSPENDED) {
+      await showExpiredPayment(ctx, services, clinicId);
+    } else {
+      await ctx.editMessageText('👨‍⚕️ *Admin panel*', { parse_mode: 'Markdown', ...adminMainKb(miniAppUrl) })
+        .catch(() => ctx.reply('👨‍⚕️ *Admin panel*', { parse_mode: 'Markdown', ...adminMainKb(miniAppUrl) }));
+    }
   });
 
   // ── Mini app web_app_data handler (Obuna tab "Tanlash") ───────────
