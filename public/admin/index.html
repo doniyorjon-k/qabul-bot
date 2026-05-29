@@ -118,20 +118,11 @@
   <button class="tab" id="tab-revenue" onclick="switchTab('revenue')">
     <svg viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>Daromad
   </button>
-  <button class="tab" id="tab-stats" onclick="switchTab('stats')">
-    <svg viewBox="0 0 24 24"><path d="M18 20V10M12 20V4M6 20v-6"/></svg>Statistika
-  </button>
   <button class="tab" id="tab-reviews" onclick="switchTab('reviews')">
     <svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>Fikrlar
   </button>
-  <button class="tab" id="tab-search" onclick="switchTab('search')">
-    <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>Qidirish
-  </button>
   <button class="tab" id="tab-settings" onclick="switchTab('settings')">
     <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>Sozlamalar
-  </button>
-  <button class="tab" id="tab-sub" onclick="switchTab('sub')">
-    <svg viewBox="0 0 24 24"><rect x="1" y="4" width="22" height="16" rx="2"/><path d="M1 10h22"/></svg>Obuna
   </button>
 </nav>
 
@@ -258,7 +249,7 @@ async function loadToday() {
 }
 
 const UZ_DAYS = ['Yakshanba','Dushanba','Seshanba','Chorshanba','Payshanba','Juma','Shanba'];
-let allApts = [], aptsFilters = { service: '', status: '', dateFrom: '', dateTo: '' }, _aptsSvcs = [];
+let allApts = [], aptsFilters = { search: '', service: '', status: '', dateFrom: '', dateTo: '' }, _aptsSvcs = [];
 
 async function loadApts() {
   const el = document.getElementById('apts-content');
@@ -273,6 +264,7 @@ async function loadApts() {
 function setAptsSvc(i) { aptsFilters.service = i < 0 ? '' : _aptsSvcs[i]; _renderAptsPage(); }
 function setAptsSt(s) { aptsFilters.status = s; _renderAptsPage(); }
 function setAptsDate(key, val) { aptsFilters[key] = val; _renderAptsList(); }
+function setAptsSearch(val) { aptsFilters.search = val.toLowerCase().trim(); _renderAptsList(); }
 
 function _renderAptsPage() {
   const el = document.getElementById('apts-content');
@@ -282,16 +274,20 @@ function _renderAptsPage() {
   const stChips = `<span class="chip chip-sm ${!aptsFilters.status?'on':''}" onclick="setAptsSt('')">Hammasi</span>` +
     statusList.map(s => `<span class="chip chip-sm ${aptsFilters.status===s?'on':''}" onclick="setAptsSt('${s}')">${LBL[s]||s}</span>`).join('');
   el.innerHTML = `
-    <div style="margin:10px 0 4px">
-      <div class="sec-t" style="margin-top:8px">Kategoriya</div>
+    <div style="position:relative;padding-top:8px;margin-bottom:12px">
+      <svg style="position:absolute;left:13px;top:50%;transform:translateY(-50%);width:16px;height:16px;fill:none;stroke:var(--hint);stroke-width:2;stroke-linecap:round;stroke-linejoin:round" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+      <input class="srch" placeholder="Ism yoki telefon raqam..." value="${aptsFilters.search}" oninput="setAptsSearch(this.value)"/>
+    </div>
+    <div style="margin:0 0 8px">
+      <div class="sec-t" style="margin-top:4px">Kategoriya</div>
       <div style="display:flex;flex-wrap:wrap;gap:6px">${svcChips}</div>
     </div>
-    <div style="margin:10px 0 4px">
-      <div class="sec-t" style="margin-top:8px">Holat</div>
+    <div style="margin:8px 0">
+      <div class="sec-t" style="margin-top:4px">Holat</div>
       <div style="display:flex;flex-wrap:wrap;gap:6px">${stChips}</div>
     </div>
-    <div style="margin:10px 0 12px">
-      <div class="sec-t" style="margin-top:8px">Sana oralig'i</div>
+    <div style="margin:8px 0 12px">
+      <div class="sec-t" style="margin-top:4px">Sana oralig'i</div>
       <div style="display:flex;gap:8px">
         <input type="date" class="f-inp" style="flex:1;margin:0" value="${aptsFilters.dateFrom}" onchange="setAptsDate('dateFrom',this.value)"/>
         <input type="date" class="f-inp" style="flex:1;margin:0" value="${aptsFilters.dateTo}" onchange="setAptsDate('dateTo',this.value)"/>
@@ -305,6 +301,7 @@ function _renderAptsList() {
   const el = document.getElementById('apts-list');
   if (!el) return;
   let list = allApts.slice();
+  if (aptsFilters.search) list = list.filter(a => (a.clientName||'').toLowerCase().includes(aptsFilters.search) || (a.clientPhone||'').includes(aptsFilters.search));
   if (aptsFilters.service) list = list.filter(a => a.service?.name === aptsFilters.service);
   if (aptsFilters.status) list = list.filter(a => a.status === aptsFilters.status);
   if (aptsFilters.dateFrom) list = list.filter(a => (a.timeSlot?.date || '') >= aptsFilters.dateFrom);
@@ -327,7 +324,7 @@ async function loadRevenue() {
   const el = document.getElementById('revenue-content');
   el.innerHTML = '<div class="spin"></div>';
   try {
-    const r = await api('/revenue');
+    const [r, s] = await Promise.all([api('/revenue'), api('/stats')]);
     const svcRows = (r.byService||[]).map(s=>`
       <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border)">
         <div><div style="font-size:14px;font-weight:500">${s.name||'—'}</div><div style="font-size:12px;color:var(--hint)">${s.count} ta qabul</div></div>
@@ -363,9 +360,42 @@ async function loadRevenue() {
       <div class="card" style="margin-bottom:10px">
         <div style="font-weight:600;font-size:14px;margin-bottom:10px">🦷 Xizmatlar bo'yicha</div>${svcRows}
       </div>
-      <div class="card">
+      <div class="card" style="margin-bottom:10px">
         <div style="font-weight:600;font-size:14px;margin-bottom:10px">👥 Mijozlar (Top 10)</div>${userRows}
-      </div>`;
+      </div>
+      ${(() => {
+        const m = s.monthly || [];
+        const rv = s.reviewStats || { total:0, avg:0 };
+        const UZ_M = {};
+        ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'].forEach((n,i)=>UZ_M[String(i+1).padStart(2,'0')]=n);
+        return `<div class="card" style="margin-bottom:10px">
+          <div style="font-weight:600;font-size:14px;margin-bottom:12px">📊 Qabullar statistikasi</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">
+            <div style="grid-column:span 2;background:rgba(10,132,255,.09);border:1px solid rgba(10,132,255,.18);border-radius:12px;padding:12px;text-align:center">
+              <div style="font-size:28px;font-weight:800;color:var(--btn)">${s.total}</div>
+              <div style="font-size:11px;color:var(--hint)">Jami qabullar</div>
+            </div>
+            <div class="card" style="margin:0;text-align:center"><div style="font-size:20px;font-weight:700;color:var(--green)">${s.confirmed}</div><div style="font-size:11px;color:var(--hint)">Tasdiqlangan</div></div>
+            <div class="card" style="margin:0;text-align:center"><div style="font-size:20px;font-weight:700;color:var(--orange)">${s.completed}</div><div style="font-size:11px;color:var(--hint)">Yakunlangan</div></div>
+            <div class="card" style="margin:0;text-align:center"><div style="font-size:20px;font-weight:700;color:var(--red)">${s.cancelled}</div><div style="font-size:11px;color:var(--hint)">Bekor</div></div>
+            <div class="card" style="margin:0;text-align:center"><div style="font-size:20px;font-weight:700;color:var(--btn)">${s.users}</div><div style="font-size:11px;color:var(--hint)">Bemorlar</div></div>
+          </div>
+          ${m.length?`<div style="font-size:13px;font-weight:500;color:var(--hint);margin-bottom:8px">Oylik qabullar</div><canvas id="rev-month-chart" height="130"></canvas>`:''}
+          ${rv.total?`<div style="margin-top:12px;display:flex;align-items:center;gap:8px"><span style="font-size:22px;font-weight:700;color:#ff9f0a">${rv.avg}</span><span style="font-size:13px;color:var(--hint)">/ 5 · ${rv.total} ta fikr</span></div>`:''}
+        </div>`;
+      })()}`;
+    const m = s.monthly || [];
+    if (m.length) {
+      const UZ_M2 = {};
+      ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'].forEach((n,i)=>UZ_M2[String(i+1).padStart(2,'0')]=n);
+      const mLabels = m.map(x=>{ const[,mo]=x.month.split('-'); return UZ_M2[mo]||mo; });
+      if (monthChart) monthChart.destroy();
+      monthChart = new Chart(document.getElementById('rev-month-chart'), {
+        type:'bar',
+        data:{labels:mLabels,datasets:[{data:m.map(x=>x.count),backgroundColor:'rgba(10,132,255,.65)',borderRadius:6,borderSkipped:false}]},
+        options:{responsive:true,plugins:{legend:{display:false}},scales:{x:{grid:{color:'rgba(255,255,255,.04)'},ticks:{color:'#636366',font:{size:11}}},y:{grid:{color:'rgba(255,255,255,.06)'},ticks:{color:'#636366',font:{size:11},stepSize:1}}}}
+      });
+    }
   } catch(e) { el.innerHTML = `<p style="color:var(--red);text-align:center;margin-top:48px;font-size:13px">${e.message}</p>`; }
 }
 
@@ -460,7 +490,7 @@ async function onSearch(val) {
 }
 
 const DAY_LABELS = ['','Du','Se','Ch','Pa','Ju','Sh','Ya'];
-let scheduleData=null, clinicData=null, pendingHours=null, servicesData=[];
+let scheduleData=null, clinicData=null, pendingHours=null, servicesData=[], subData=null;
 
 function allTimeSlots() {
   const s=[];
@@ -511,7 +541,7 @@ async function loadSettings() {
   const el=document.getElementById('settings-content');
   el.innerHTML='<div class="spin"></div>';
   try {
-    [scheduleData,clinicData,servicesData]=await Promise.all([api('/schedule'),api('/settings'),api('/services').catch(()=>[])]);
+    [scheduleData,clinicData,servicesData,subData]=await Promise.all([api('/schedule'),api('/settings'),api('/services').catch(()=>[]),api('/subscription').catch(()=>null)]);
     pendingHours=[...scheduleData.workHours];
     renderSettings();
   } catch(e) { el.innerHTML=`<p style="color:var(--red);text-align:center;margin-top:48px;font-size:13px">${e.message}</p>`; }
@@ -547,6 +577,30 @@ function renderSettings() {
     <label class="f-lbl">Xarita URL</label><input class="f-inp" id="cf-maps" value="${clinicData.mapsUrl||''}" placeholder="https://maps.app.goo.gl/..."/>
     <button class="btn-p" onclick="saveClinicInfo()">💾 Saqlash</button>
   </div>
+  ${subData ? (() => {
+    const statusLabels={trial:'🆓 Sinov davri',active:'✅ Faol',expired:'❌ Tugagan',suspended:'⛔ To\'xtatilgan'};
+    const statusColors={trial:'var(--btn)',active:'var(--green)',expired:'var(--red)',suspended:'var(--red)'};
+    const color=statusColors[subData.status]||'var(--hint)';
+    const daysLine=subData.daysLeft!=null?(subData.daysLeft>0?`<div style="color:var(--hint);font-size:13px;margin-top:4px">⏳ ${subData.daysLeft} kun qoldi</div>`:`<div style="color:var(--red);font-size:13px;margin-top:4px">❗ Muddati tugagan</div>`):'';
+    const endsLine=subData.endsAt?`<div style="color:var(--hint);font-size:12px;margin-top:2px">📅 ${new Date(subData.endsAt).toLocaleDateString('ru-RU')}</div>`:'';
+    let plansHtml='';
+    if(subData.plans&&subData.plans.length){
+      const endsDateStr=subData.endsAt?new Date(subData.endsAt).toLocaleDateString('ru-RU'):'—';
+      plansHtml=subData.plans.map(p=>{
+        const isActivePlan=subData.status==='active'&&subData.currentPlan===p.name;
+        return `<div class="card" style="margin-bottom:8px${isActivePlan?';border-color:rgba(48,209,88,.35)':''}">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start">
+            <div><div style="font-weight:600;font-size:15px">${p.name}</div><div style="color:var(--hint);font-size:13px;margin:4px 0">${p.durationDays} kun</div><div style="font-size:17px;font-weight:700;color:var(--btn)">${p.price.toLocaleString()} so'm</div></div>
+            ${isActivePlan?`<span class="pill" style="background:rgba(48,209,88,.15);color:var(--green);flex-shrink:0;margin-top:2px">Faol</span>`:''}
+          </div>
+          ${isActivePlan?`<div style="margin-top:10px;font-size:13px;color:var(--green)">✅ Bu tarif ${endsDateStr} gacha faol</div>`:`<button class="btn-p" style="margin-top:12px" onclick="selectPlan(${p.id})">Tanlash</button>`}
+        </div>`;
+      }).join('');
+    }
+    return `<div class="sec-t">💳 Obuna</div>
+    <div class="card"><div style="font-size:16px;font-weight:700;color:${color}">${statusLabels[subData.status]||subData.status}</div>${daysLine}${endsLine}</div>
+    ${plansHtml?`<div style="margin-bottom:4px">${plansHtml}<a href="https://t.me/doniyorjon_k" style="display:block;text-align:center;color:var(--hint);font-size:13px;margin-top:4px;margin-bottom:12px;text-decoration:none">📞 Adminga murojaat</a></div>`:''}`;
+  })() : ''}
   <div class="sec-t">🦷 Xizmatlar va narxi</div>
   <div class="card" style="margin-bottom:20px">
     ${servicesData.length ? servicesData.map(s=>{
@@ -598,7 +652,7 @@ async function saveClinicInfo() {
   catch(e){showCustomAlert('❌ '+e.message);}
 }
 
-const TABS=['today','apts','revenue','stats','reviews','search','settings','sub'];
+const TABS=['today','apts','revenue','reviews','settings'];
 let curTab='today';
 const loaded={};
 function switchTab(tab){
@@ -606,7 +660,7 @@ function switchTab(tab){
   TABS.forEach(t=>{ document.getElementById('sec-'+t).classList.toggle('active',t===tab); document.getElementById('tab-'+t).classList.toggle('on',t===tab); });
   if(!loaded[tab]){loaded[tab]=true;loadTabFn(tab);}
 }
-function loadTabFn(tab){ if(tab==='today')loadToday(); else if(tab==='apts')loadApts(); else if(tab==='revenue')loadRevenue(); else if(tab==='stats')loadStats(); else if(tab==='reviews')loadReviews(); else if(tab==='settings')loadSettings(); else if(tab==='sub')loadSub(); }
+function loadTabFn(tab){ if(tab==='today')loadToday(); else if(tab==='apts')loadApts(); else if(tab==='revenue')loadRevenue(); else if(tab==='reviews')loadReviews(); else if(tab==='settings')loadSettings(); }
 function refreshTab(){ delete loaded[curTab]; loadTabFn(curTab); }
 loaded['today']=true; loadToday();
 
