@@ -773,7 +773,7 @@ export function setupBotHandlers(
     );
   });
 
-  // ── Bugungi / Haftalik ────────────────────────────────────────────
+  // ── Bugungi / Qabullar ────────────────────────────────────────────
   bot.action('adm:today', async (ctx) => {
     await ctx.answerCbQuery();
     if (!isAdmin(ctx.from.id)) return;
@@ -798,27 +798,30 @@ export function setupBotHandlers(
     await ctx.editMessageText(text, { parse_mode: 'Markdown', ...Markup.inlineKeyboard(btns) });
   });
 
-  const renderWeek = async (ctx: any) => {
-    const list = await services.appointmentsService.findWeekAppointments(clinicId);
+  const renderApts = async (ctx: any) => {
+    const all = await services.appointmentsService.findAllForAdmin(clinicId, 100);
+    const now = new Date();
+    const list = all
+      .filter(a => a.timeSlot && new Date(`${a.timeSlot.date}T${a.timeSlot.time}:00+05:00`) > now)
+      .sort((a, b) => `${a.timeSlot.date}${a.timeSlot.time}`.localeCompare(`${b.timeSlot.date}${b.timeSlot.time}`));
     if (!list.length) {
-      await ctx.editMessageText('📅 Kelgusi hafta uchun qabul yo\'q.', { ...Markup.inlineKeyboard([[Markup.button.callback('⬅️ Orqaga', 'adm:back')]]) });
+      await ctx.editMessageText('📋 Kelgusi qabul yo\'q.', { ...Markup.inlineKeyboard([[Markup.button.callback('⬅️ Orqaga', 'adm:back')]]) });
       return;
     }
     const rows: any[][] = [];
     let prevDate = '';
     for (const a of list) {
       if (a.timeSlot?.date !== prevDate) {
-        rows.push([Markup.button.callback(`📆 ${fmtDate(a.timeSlot?.date)}`, 'adm:week:ig')]);
+        rows.push([Markup.button.callback(`📆 ${fmtDate(a.timeSlot?.date)}`, 'adm:noop')]);
         prevDate = a.timeSlot?.date;
       }
       rows.push([Markup.button.callback(`🕐 ${fmtTime(a.timeSlot.time)}  ${a.service.name} — ${a.clientName}`, `adm:wapt:${a.id}`)]);
     }
     rows.push([Markup.button.callback('⬅️ Orqaga', 'adm:back')]);
-    await ctx.editMessageText(`📅 *Haftalik jadval* (${list.length} ta qabul):`, { parse_mode: 'Markdown', ...Markup.inlineKeyboard(rows) });
+    await ctx.editMessageText(`📋 *Kelgusi qabullar* (${list.length} ta):`, { parse_mode: 'Markdown', ...Markup.inlineKeyboard(rows) });
   };
 
-  bot.action('adm:week', async (ctx) => { await ctx.answerCbQuery(); if (!isAdmin(ctx.from.id)) return; await renderWeek(ctx); });
-  bot.action('adm:week:ig', async (ctx) => { await ctx.answerCbQuery(); });
+  bot.action('adm:apts', async (ctx) => { await ctx.answerCbQuery(); if (!isAdmin(ctx.from.id)) return; await renderApts(ctx); });
 
   bot.action(/^adm:wapt:(\d+)$/, async (ctx) => {
     await ctx.answerCbQuery();
@@ -835,7 +838,7 @@ export function setupBotHandlers(
     if (msLeft <= 0) actionBtn = Markup.button.callback('✅ Qabul yakunlangan', 'adm:noop');
     else if (msLeft <= 30 * 60 * 1000) actionBtn = Markup.button.callback('⏳ 30 daqiqadan kam qoldi', 'adm:noop');
     else actionBtn = Markup.button.callback('❌ Bekor qilish', `adm:apt:rej:${apt.id}`);
-    await ctx.editMessageText(text, { parse_mode: 'Markdown', ...Markup.inlineKeyboard([[actionBtn, Markup.button.callback('⬅️ Jadvalga qaytish', 'adm:week')]]) });
+    await ctx.editMessageText(text, { parse_mode: 'Markdown', ...Markup.inlineKeyboard([[actionBtn, Markup.button.callback('⬅️ Qabullarga qaytish', 'adm:apts')]]) });
   });
 
   // ── Statistika ────────────────────────────────────────────────────
@@ -1628,7 +1631,7 @@ function adminMainKb(miniAppUrl?: string) {
   const rows: any[] = [];
   if (miniAppUrl) rows.push([Markup.button.webApp('🌐 Mini App ochish', miniAppUrl)]);
   rows.push(
-    [Markup.button.callback('📋 Bugungi qabullar', 'adm:today'), Markup.button.callback('📅 Haftalik jadval', 'adm:week')],
+    [Markup.button.callback('📋 Bugungi qabullar', 'adm:today'), Markup.button.callback('📅 Qabullar', 'adm:apts')],
     [Markup.button.callback('📊 Statistika', 'adm:stats'), Markup.button.callback('💬 Mijozlar fikri', 'adm:reviews')],
     [Markup.button.callback('⏰ Ish vaqtini sozla', 'adm:schedule'), Markup.button.callback('⚙️ Sozlamalar', 'adm:settings')],
     [Markup.button.callback('📢 Foydalanuvchilarga xabar yuborish', 'adm:broadcast')],
