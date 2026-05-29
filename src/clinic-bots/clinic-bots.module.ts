@@ -12,7 +12,6 @@ import { ReviewsModule } from '../reviews/reviews.module';
 import { PaymentsModule } from '../payments/payments.module';
 import { PlansModule } from '../plans/plans.module';
 import { PromosModule } from '../promos/promos.module';
-import { SuperAdminBotModule } from '../super-admin/super-admin-bot.module';
 
 @Module({
   imports: [
@@ -28,7 +27,6 @@ import { SuperAdminBotModule } from '../super-admin/super-admin-bot.module';
     PaymentsModule,
     PlansModule,
     PromosModule,
-    SuperAdminBotModule,
   ],
   providers: [ClinicBotsService],
   exports: [ClinicBotsService],

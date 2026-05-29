@@ -440,13 +440,30 @@ async function loadPayments() {
         <div style="display:flex;justify-content:space-between;margin-bottom:4px"><span style="font-size:12px;color:var(--hint)">📋 Reja</span><b style="font-size:13px">${p.plan?.name||'—'}</b></div>
         <div style="display:flex;justify-content:space-between"><span style="font-size:12px;color:var(--hint)">💰 Summa</span><b style="font-size:13px;color:var(--green)">${(p.amount||0).toLocaleString()} so'm</b></div>
       </div>
-      ${p.screenshotFileId?`<div style="font-size:12px;color:var(--hint);margin-bottom:10px">📷 Screenshot yuborilgan</div>`:''}
+      ${p.screenshotFileId?`<div id="ss-${p.id}" style="margin-bottom:10px"><div style="font-size:12px;color:var(--hint);cursor:pointer;text-decoration:underline" onclick="loadScreenshot(${p.id})">📷 Screenshotni ko'rish</div></div>`:''}
       <div style="display:flex;gap:8px">
         <button class="btn-p btn-sm" style="flex:1;padding:10px" onclick="confirmPayment(${p.id})">✅ Tasdiqlash</button>
         <button class="btn-r btn-sm" style="flex:1;padding:10px" onclick="openRejectModal(${p.id})">❌ Rad etish</button>
       </div>
     </div>`).join('');
   } catch(e){el.innerHTML=`<p style="color:var(--red);text-align:center;margin-top:48px">${e.message}</p>`;}
+}
+
+async function loadScreenshot(id) {
+  const el = document.getElementById('ss-'+id);
+  if (!el) return;
+  el.innerHTML = '<div style="font-size:12px;color:var(--hint)">Yuklanmoqda...</div>';
+  try {
+    const res = await fetch(`/api/super-admin/payments/${id}/screenshot`, {
+      headers: { 'x-init-data': initData },
+      redirect: 'follow',
+    });
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    el.innerHTML = `<img src="${url}" style="width:100%;border-radius:10px;display:block" alt="Screenshot" />`;
+  } catch(e) {
+    el.innerHTML = '<div style="font-size:12px;color:var(--red)">Yuklab bo\'lmadi</div>';
+  }
 }
 
 async function confirmPayment(id) {

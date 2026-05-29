@@ -13,7 +13,6 @@ import { ClinicsService } from '../clinics/clinics.service';
 import { PaymentsService } from '../payments/payments.service';
 import { PlansService } from '../plans/plans.service';
 import { PromosService } from '../promos/promos.service';
-import { SuperAdminBotService } from '../super-admin/super-admin-bot.service';
 import {
   mainMenuKeyboard, cancelKeyboard, confirmKeyboard,
   nameStepKeyboard, phoneStepKeyboard,
@@ -36,7 +35,6 @@ export interface BotServices {
   paymentsService: PaymentsService;
   plansService: PlansService;
   promosService: PromosService;
-  superAdminBotService: SuperAdminBotService;
 }
 
 interface UserSession {
@@ -657,6 +655,33 @@ export function setupBotHandlers(
     await ctx.answerCbQuery();
     delASess(ctx.from.id);
     await ctx.editMessageText('❌ To\'lov bekor qilindi.');
+  });
+
+  // ── Mini app web_app_data handler (Obuna tab "Tanlash") ───────────
+  bot.on('web_app_data', async (ctx) => {
+    if (!isAdmin(ctx.from.id)) return;
+    try {
+      const raw = (ctx.message as any)?.web_app_data?.data;
+      if (!raw) return;
+      const data = JSON.parse(raw);
+      if (data.action !== 'pay_plan' || !data.planId) return;
+      const plan = await services.plansService.findById(Number(data.planId));
+      if (!plan) { await ctx.reply('❌ Tarif topilmadi.'); return; }
+      const promo = await services.promosService.findActive();
+      let amount = plan.price;
+      let promoLine = '';
+      if (promo) {
+        amount = services.promosService.applyDiscount(amount, promo);
+        promoLine = `\n🎁 Promo: *${promo.title}* — chegirma qo'llanildi!\n`;
+      }
+      const cardNum = process.env.PAYMENT_CARD_NUMBER || '—';
+      const cardOwner = process.env.PAYMENT_CARD_OWNER || '—';
+      setASess(ctx.from.id, { payStep: 'send_screenshot', payPlanId: plan.id, payPlanName: plan.name, payAmount: amount });
+      await ctx.reply(
+        `💳 *To\'lov ma\'lumotlari:*\n\n📋 Reja: *${plan.name}* (${plan.durationDays} kun)\n💰 Summa: *${amount.toLocaleString()} so\'m*${promoLine}\n\n💳 Karta: \`${cardNum}\`\n👤 Egasi: *${cardOwner}*\n\nPul o\'tkazganingizdan so\'ng *skrinshotni yuboring:*`,
+        { parse_mode: 'Markdown', ...Markup.inlineKeyboard([[Markup.button.callback('❌ Bekor qilish', 'pay:cancel')]]) },
+      );
+    } catch {}
   });
 
   // ── Broadcast ─────────────────────────────────────────────────────
@@ -1447,11 +1472,11 @@ export function setupBotHandlers(
       );
       const capText =
         `💳 *Yangi to\'lov #${payment.id}*\n\n` +
-        `🏥 Klinika: *${currentClinic?.name || ''}* (\\#${clinicId})\n` +
+        `🏥 Klinika: *${currentClinic?.name || ''}* (#${clinicId})\n` +
         `📋 Reja: *${plan?.name || ''}* (${plan?.durationDays || ''} kun)\n` +
         `💰 Summa: *${(aSess.payAmount ?? plan?.price ?? 0).toLocaleString()} so\'m*\n` +
         `👤 Admin Telegram ID: ${ctx.from.id}`;
-      await services.superAdminBotService.notifyPhoto(fileId, capText);
+      await notifySuperAdminPhoto(fileId, capText, superAdminIds);
       return;
     }
 
@@ -1675,6 +1700,20 @@ function fmtDate(dateStr: string): string {
   if (!dateStr) return '';
   const [y, m, d] = dateStr.split('-');
   return `${d}.${m}.${y}`;
+}
+
+async function notifySuperAdminPhoto(fileId: string, caption: string, superAdminIds: number[]) {
+  const token = process.env.SUPER_ADMIN_BOT_TOKEN;
+  if (!token || !superAdminIds.length) return;
+  for (const id of superAdminIds) {
+    try {
+      await fetch(`https://api.telegram.org/bot${token}/sendPhoto`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ chat_id: id, photo: fileId, caption, parse_mode: 'Markdown' }),
+      });
+    } catch {}
+  }
 }
 
 async function showExpiredPayment(ctx: any, services: BotServices, clinicId: number) {

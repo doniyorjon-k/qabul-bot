@@ -1,8 +1,9 @@
 import {
   Controller, Get, Post, Put, Delete,
   Body, Param, ParseIntPipe, Headers,
-  ForbiddenException, BadRequestException,
+  ForbiddenException, BadRequestException, Res,
 } from '@nestjs/common';
+import { Response } from 'express';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, MoreThanOrEqual } from 'typeorm';
 import { ConfigService } from '@nestjs/config';
@@ -239,6 +240,24 @@ export class SuperAdminApiController {
   async getAll(@Headers('x-init-data') d: string) {
     this.validate(d);
     return this.paymentsService.findAll();
+  }
+
+  @Get('payments/:id/screenshot')
+  async getScreenshot(
+    @Param('id', ParseIntPipe) id: number,
+    @Headers('x-init-data') d: string,
+    @Res() res: Response,
+  ) {
+    this.validate(d);
+    const payment = await this.paymentsService.findById(id);
+    if (!payment?.screenshotFileId) throw new BadRequestException('Screenshot topilmadi');
+    const getFileRes = await fetch(
+      `https://api.telegram.org/bot${this.botToken}/getFile?file_id=${payment.screenshotFileId}`,
+    );
+    const json: any = await getFileRes.json();
+    if (!json.ok) throw new BadRequestException('Telegram faylni topamadi');
+    const fileUrl = `https://api.telegram.org/file/bot${this.botToken}/${json.result.file_path}`;
+    res.redirect(fileUrl);
   }
 
   @Post('payments/:id/confirm')
