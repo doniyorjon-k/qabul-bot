@@ -13,6 +13,7 @@ import { ClinicsService } from '../clinics/clinics.service';
 import { PaymentsService } from '../payments/payments.service';
 import { PlansService } from '../plans/plans.service';
 import { PromosService } from '../promos/promos.service';
+import { SuperAdminBotService } from '../super-admin/super-admin-bot.service';
 import {
   mainMenuKeyboard, cancelKeyboard, confirmKeyboard,
   nameStepKeyboard, phoneStepKeyboard,
@@ -35,6 +36,7 @@ export interface BotServices {
   paymentsService: PaymentsService;
   plansService: PlansService;
   promosService: PromosService;
+  superAdminBotService: SuperAdminBotService;
 }
 
 interface UserSession {
@@ -1445,13 +1447,11 @@ export function setupBotHandlers(
       );
       const capText =
         `💳 *Yangi to\'lov #${payment.id}*\n\n` +
-        `🏥 Klinika: ${currentClinic?.name || ''} (#${clinicId})\n` +
-        `📋 Reja: ${plan?.name || ''} (${plan?.durationDays || ''} kun)\n` +
-        `💰 Summa: ${(aSess.payAmount ?? plan?.price ?? 0).toLocaleString()} so\'m\n` +
-        `👤 Admin: ${ctx.from.id}`;
-      for (const saId of superAdminIds) {
-        try { await bot.telegram.sendPhoto(saId, fileId, { caption: capText, parse_mode: 'Markdown' }); } catch {}
-      }
+        `🏥 Klinika: *${currentClinic?.name || ''}* (\\#${clinicId})\n` +
+        `📋 Reja: *${plan?.name || ''}* (${plan?.durationDays || ''} kun)\n` +
+        `💰 Summa: *${(aSess.payAmount ?? plan?.price ?? 0).toLocaleString()} so\'m*\n` +
+        `👤 Admin Telegram ID: ${ctx.from.id}`;
+      await services.superAdminBotService.notifyPhoto(fileId, capText);
       return;
     }
 

@@ -459,4 +459,11 @@ export class SuperAdminBotService implements OnModuleInit {
       try { await this.bot.telegram.sendMessage(id, text, extra); } catch {}
     }
   }
+
+  async notifyPhoto(fileId: string, caption: string): Promise<void> {
+    if (!this.bot) return;
+    for (const id of this.superAdminIds) {
+      try { await this.bot.telegram.sendPhoto(id, fileId, { caption, parse_mode: 'Markdown' }); } catch {}
+    }
+  }
 }

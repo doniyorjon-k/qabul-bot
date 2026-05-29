@@ -13,6 +13,7 @@ import { ReviewsService } from '../reviews/reviews.service';
 import { PaymentsService } from '../payments/payments.service';
 import { PlansService } from '../plans/plans.service';
 import { PromosService } from '../promos/promos.service';
+import { SuperAdminBotService } from '../super-admin/super-admin-bot.service';
 import { setupBotHandlers, BotServices } from './bot-factory';
 import { Clinic } from '../database/entities/clinic.entity';
 import * as https from 'https';
@@ -38,6 +39,7 @@ export class ClinicBotsService implements OnModuleInit {
     private readonly paymentsService: PaymentsService,
     private readonly plansService: PlansService,
     private readonly promosService: PromosService,
+    private readonly superAdminBotService: SuperAdminBotService,
   ) {}
 
   async onModuleInit() {
@@ -63,6 +65,7 @@ export class ClinicBotsService implements OnModuleInit {
       paymentsService: this.paymentsService,
       plansService: this.plansService,
       promosService: this.promosService,
+      superAdminBotService: this.superAdminBotService,
     };
   }
 
