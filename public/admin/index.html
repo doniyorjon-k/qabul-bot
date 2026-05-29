@@ -8,6 +8,7 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   <style>
     :root{--bg:var(--tg-theme-bg-color,#111113);--bg2:var(--tg-theme-secondary-bg-color,#1c1c1e);--bg3:rgba(255,255,255,.05);--txt:var(--tg-theme-text-color,#f2f2f7);--hint:var(--tg-theme-hint-color,#636366);--btn:var(--tg-theme-button-color,#0a84ff);--btn-txt:var(--tg-theme-button-text-color,#fff);--red:var(--tg-theme-destructive-text-color,#ff453a);--green:#30d158;--orange:#ff9f0a;--border:rgba(255,255,255,.07)}
+    html.tg-light{--border:rgba(0,0,0,.13);--bg3:rgba(0,0,0,.05)}
     *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;margin:0;padding:0}
     body{background:var(--bg);color:var(--txt);font-family:-apple-system,BlinkMacSystemFont,sans-serif;padding-bottom:86px}
     .section{display:none}.section.active{display:block}
@@ -31,7 +32,7 @@
     .f-inp{background:var(--bg3);color:var(--txt);border:1px solid var(--border);border-radius:12px;padding:11px 14px;width:100%;font-size:14px;outline:none;margin-bottom:10px;-webkit-appearance:none}
     .f-inp:focus{border-color:rgba(10,132,255,.5)}
     .f-inp::placeholder{color:var(--hint)}
-    .chip{display:inline-flex;align-items:center;justify-content:center;padding:7px 12px;border-radius:10px;font-size:13px;font-weight:500;cursor:pointer;border:1.5px solid transparent;background:var(--bg3);color:var(--hint);user-select:none;transition:all .15s}
+    .chip{display:inline-flex;align-items:center;justify-content:center;padding:7px 12px;border-radius:10px;font-size:13px;font-weight:500;cursor:pointer;border:1.5px solid var(--border);background:var(--bg3);color:var(--hint);user-select:none;transition:all .15s}
     .chip.on{background:rgba(10,132,255,.15);border-color:rgba(10,132,255,.35);color:var(--btn)}
     .chip-sm{padding:5px 9px;font-size:12px;border-radius:8px}
     .btn-p{background:var(--btn);color:var(--btn-txt);border:none;border-radius:12px;padding:12px;font-size:14px;font-weight:600;cursor:pointer;width:100%}
@@ -121,6 +122,7 @@
 <script>
 const tg = window.Telegram.WebApp;
 tg.ready(); tg.expand();
+if (tg.colorScheme === 'light') document.documentElement.classList.add('tg-light');
 const initData = tg.initData;
 const clinicId = new URLSearchParams(window.location.search).get('clinicId') || '';
 
