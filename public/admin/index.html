@@ -547,18 +547,29 @@ function renderSettings() {
     <label class="f-lbl">Xarita URL</label><input class="f-inp" id="cf-maps" value="${clinicData.mapsUrl||''}" placeholder="https://maps.app.goo.gl/..."/>
     <button class="btn-p" onclick="saveClinicInfo()">💾 Saqlash</button>
   </div>
-  <div class="sec-t">🦷 Xizmatlar narxi</div>
+  <div class="sec-t">🦷 Xizmatlar va narxi</div>
   <div class="card" style="margin-bottom:20px">
     ${servicesData.length ? servicesData.map(s=>{
       const p=parseInt(String(s.price||0).replace(/\D/g,''))||0;
-      return `<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--border)">
-        <div><div style="font-size:14px;font-weight:500">${s.emoji||'🦷'} ${s.name}</div><div style="font-size:11px;color:var(--hint)">${s.isActive?'Faol':'Nofaol'}</div></div>
-        <div id="svc-price-${s.id}" style="display:flex;align-items:center;gap:8px">
-          <span style="font-size:14px;font-weight:600;color:var(--green)">${p?p.toLocaleString()+' so\'m':'—'}</span>
-          <button class="btn-p btn-sm" onclick="editSvcPrice(${s.id})">✏️</button>
+      return `<div id="svc-row-${s.id}" style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--border)">
+        <div style="flex:1;min-width:0">
+          <div style="font-size:14px;font-weight:500">${s.emoji||'🦷'} ${s.name}</div>
+          <div style="font-size:11px;color:${p?'var(--green)':'var(--hint)'};margin-top:2px">${p?p.toLocaleString()+' so\'m':'Narx belgilanmagan'}</div>
+        </div>
+        <div style="display:flex;gap:6px;flex-shrink:0;margin-left:8px">
+          <button class="btn-p btn-sm" onclick="editSvc(${s.id})">✏️</button>
+          <button class="btn-r btn-sm" onclick="deleteSvc(${s.id},'${s.name.replace(/'/g,"\\'").replace(/"/g,'\\"')}')">🗑</button>
         </div>
       </div>`;
-    }).join('') : '<div style="font-size:13px;color:var(--hint);padding:10px 0">Xizmatlar yo\'q</div>'}
+    }).join('') : ''}
+    <div style="margin-top:${servicesData.length?'12px':'0'};padding-top:${servicesData.length?'12px':'0'};${servicesData.length?'border-top:1px solid var(--border)':''}">
+      <div style="font-size:12px;color:var(--hint);font-weight:600;margin-bottom:8px">➕ Yangi xizmat</div>
+      <div style="display:flex;gap:6px;align-items:center">
+        <input class="f-inp" id="new-svc-name" placeholder="Xizmat nomi..." style="flex:1;margin:0"/>
+        <input class="f-inp" type="number" id="new-svc-price" placeholder="Narx..." style="width:100px;margin:0"/>
+        <button class="btn-p btn-sm" style="white-space:nowrap" onclick="addNewSvc()">+ Qo'sh</button>
+      </div>
+    </div>
   </div>`;
 }
 
@@ -643,21 +654,47 @@ async function loadSub(){
   }catch(e){el.innerHTML='<div style="color:var(--red);padding:20px;text-align:center">Yuklashda xato</div>';}
 }
 
-function editSvcPrice(id) {
+function editSvc(id) {
   const s=servicesData.find(x=>x.id===id); if(!s) return;
   const p=parseInt(String(s.price||0).replace(/\D/g,''))||0;
-  document.getElementById('svc-price-'+id).innerHTML=
-    `<input type="number" class="f-inp" id="svc-p-${id}" value="${p||''}" placeholder="Narx..." style="width:100px;margin:0;padding:8px 10px"/><button class="btn-p btn-sm" onclick="saveSvcPrice(${id})">✓</button>`;
+  document.getElementById('svc-row-'+id).innerHTML=`
+    <div style="display:flex;gap:6px;align-items:center;width:100%;padding:4px 0">
+      <input class="f-inp" id="svc-n-${id}" value="${s.name.replace(/"/g,'&quot;')}" placeholder="Nom..." style="flex:1;margin:0"/>
+      <input class="f-inp" type="number" id="svc-p-${id}" value="${p||''}" placeholder="Narx..." style="width:95px;margin:0"/>
+      <button class="btn-p btn-sm" onclick="saveSvc(${id})">✓</button>
+      <button class="btn-g btn-sm" onclick="renderSettings()">✕</button>
+    </div>`;
 }
-async function saveSvcPrice(id) {
-  const val=document.getElementById('svc-p-'+id)?.value||'0';
-  const p=parseInt(val)||0;
+async function saveSvc(id) {
+  const name=(document.getElementById('svc-n-'+id)?.value||'').trim();
+  const price=parseInt(document.getElementById('svc-p-'+id)?.value||'0')||0;
+  if(!name){showCustomAlert('Xizmat nomini kiriting');return;}
   try {
-    await api('/services/'+id,{method:'PUT',body:JSON.stringify({price:p.toString()})});
+    await api('/services/'+id,{method:'PUT',body:JSON.stringify({name,price:price.toString()})});
     const idx=servicesData.findIndex(s=>s.id===id);
-    if(idx>=0) servicesData[idx].price=p.toString();
+    if(idx>=0){servicesData[idx].name=name;servicesData[idx].price=price.toString();}
     renderSettings();
-    showCustomAlert('✅ Narx saqlandi');
+    showCustomAlert('✅ Saqlandi');
+  } catch(e){showCustomAlert('❌ '+e.message);}
+}
+async function deleteSvc(id,name) {
+  showCustomConfirm(`"${name}" xizmatini o'chirishni tasdiqlaysizmi?`,async(yes)=>{
+    if(!yes) return;
+    try {
+      await api('/services/'+id,{method:'DELETE'});
+      servicesData=servicesData.filter(s=>s.id!==id);
+      renderSettings();
+    } catch(e){showCustomAlert('❌ '+e.message);}
+  });
+}
+async function addNewSvc() {
+  const name=(document.getElementById('new-svc-name')?.value||'').trim();
+  const price=parseInt(document.getElementById('new-svc-price')?.value||'0')||0;
+  if(!name){showCustomAlert('Xizmat nomini kiriting');return;}
+  try {
+    const svc=await api('/services',{method:'POST',body:JSON.stringify({name,price:price.toString()})});
+    servicesData.push(svc);
+    renderSettings();
   } catch(e){showCustomAlert('❌ '+e.message);}
 }
 
