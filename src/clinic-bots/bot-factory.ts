@@ -1476,7 +1476,7 @@ export function setupBotHandlers(
         `📋 Reja: *${plan?.name || ''}* (${plan?.durationDays || ''} kun)\n` +
         `💰 Summa: *${(aSess.payAmount ?? plan?.price ?? 0).toLocaleString()} so\'m*\n` +
         `👤 Admin Telegram ID: ${ctx.from.id}`;
-      await notifySuperAdminPhoto(fileId, capText, superAdminIds);
+      await notifySuperAdminPhoto(fileId, capText, superAdminIds, appUrl ? `${appUrl}/super-admin` : '');
       return;
     }
 
@@ -1702,15 +1702,18 @@ function fmtDate(dateStr: string): string {
   return `${d}.${m}.${y}`;
 }
 
-async function notifySuperAdminPhoto(fileId: string, caption: string, superAdminIds: number[]) {
+async function notifySuperAdminPhoto(fileId: string, caption: string, superAdminIds: number[], miniAppUrl = '') {
   const token = process.env.SUPER_ADMIN_BOT_TOKEN;
   if (!token || !superAdminIds.length) return;
+  const replyMarkup = miniAppUrl
+    ? { inline_keyboard: [[{ text: "💳 To'lovlarni ko'rish", web_app: { url: `${miniAppUrl}?tab=payments` } }]] }
+    : undefined;
   for (const id of superAdminIds) {
     try {
       await fetch(`https://api.telegram.org/bot${token}/sendPhoto`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ chat_id: id, photo: fileId, caption, parse_mode: 'Markdown' }),
+        body: JSON.stringify({ chat_id: id, photo: fileId, caption, parse_mode: 'Markdown', ...(replyMarkup ? { reply_markup: replyMarkup } : {}) }),
       });
     } catch {}
   }

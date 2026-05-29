@@ -40,7 +40,7 @@ export class PaymentsService {
     });
   }
 
-  async findAll(limit = 50): Promise<Payment[]> {
+  async findAll(limit = 200): Promise<Payment[]> {
     return this.repo.find({
       relations: ['clinic', 'plan'],
       order: { createdAt: 'DESC' },

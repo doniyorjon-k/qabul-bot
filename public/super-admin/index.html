@@ -173,7 +173,7 @@ async function loadStats() {
         <div style="font-size:22px;font-weight:700;color:${pending>0?'var(--orange)':'var(--hint)'}">${pending}</div>
         <div style="font-size:12px;color:var(--hint);margin-top:2px">💳 Kutayotgan to'lovlar</div>
       </div>
-      ${pending>0?`<button class="btn-p btn-sm" onclick="switchTab('payments')">Ko'rish</button>`:''}
+      ${pending>0?`<button class="btn-p btn-sm" onclick="switchTab('payments','pending')">Ko'rish</button>`:''}
     </div>`;
   } catch(e) { el.innerHTML=`<p style="color:var(--red);text-align:center;margin-top:48px">${e.message}</p>`; }
 }
@@ -421,33 +421,79 @@ async function createClinic() {
 
 // ── PAYMENTS ────────────────────────────────────────────────────────────
 let rejectPaymentId=null;
+let allPayments=[], payFilter='pending';
+
 async function loadPayments() {
   const el=document.getElementById('payments-content');
   el.innerHTML='<div class="spin"></div>';
   try {
-    const payments=await api('/payments/pending');
-    if (!payments.length) { el.innerHTML='<div style="text-align:center;padding:60px 16px"><div style="font-size:52px;margin-bottom:14px">💳</div><div style="font-size:17px;font-weight:700">Kutayotgan to\'lovlar yo\'q</div></div>'; return; }
-    el.innerHTML=payments.map(p=>`<div class="card">
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px">
-        <div>
-          <div style="font-weight:700;font-size:15px">💳 To'lov #${p.id}</div>
-          <div style="font-size:12px;color:var(--hint);margin-top:2px">${new Date(p.createdAt).toLocaleString('ru-RU')}</div>
-        </div>
-        <span class="pill" style="background:rgba(255,159,10,.15);color:var(--orange)">Kutmoqda</span>
-      </div>
-      <div style="background:var(--bg3);border-radius:10px;padding:10px;margin-bottom:12px">
-        <div style="display:flex;justify-content:space-between;margin-bottom:4px"><span style="font-size:12px;color:var(--hint)">🏥 Klinika</span><b style="font-size:13px">${p.clinic?.name||'—'}</b></div>
-        <div style="display:flex;justify-content:space-between;margin-bottom:4px"><span style="font-size:12px;color:var(--hint)">📋 Reja</span><b style="font-size:13px">${p.plan?.name||'—'}</b></div>
-        <div style="display:flex;justify-content:space-between"><span style="font-size:12px;color:var(--hint)">💰 Summa</span><b style="font-size:13px;color:var(--green)">${(p.amount||0).toLocaleString()} so'm</b></div>
-      </div>
-      ${p.screenshotFileId?`<div id="ss-${p.id}" style="margin-bottom:10px"><div style="font-size:12px;color:var(--hint);cursor:pointer;text-decoration:underline" onclick="loadScreenshot(${p.id})">📷 Screenshotni ko'rish</div></div>`:''}
-      <div style="display:flex;gap:8px">
-        <button class="btn-p btn-sm" style="flex:1;padding:10px" onclick="confirmPayment(${p.id})">✅ Tasdiqlash</button>
-        <button class="btn-r btn-sm" style="flex:1;padding:10px" onclick="openRejectModal(${p.id})">❌ Rad etish</button>
-      </div>
-    </div>`).join('');
+    allPayments=await api('/payments');
+    renderPayments();
   } catch(e){el.innerHTML=`<p style="color:var(--red);text-align:center;margin-top:48px">${e.message}</p>`;}
 }
+
+function renderPayments() {
+  const el=document.getElementById('payments-content');
+  const pending=allPayments.filter(p=>p.status==='pending');
+  const confirmed=allPayments.filter(p=>p.status==='confirmed');
+  const rejected=allPayments.filter(p=>p.status==='rejected');
+  const totalConfirmedAmt=confirmed.reduce((s,p)=>s+(p.amount||0),0);
+
+  const filterDefs=[
+    {key:'pending',label:'Kutmoqda',count:pending.length,color:'var(--orange)'},
+    {key:'confirmed',label:'Tasdiqlangan',count:confirmed.length,color:'var(--green)'},
+    {key:'rejected',label:'Rad etilgan',count:rejected.length,color:'var(--red)'},
+    {key:'all',label:'Barchasi',count:allPayments.length,color:'var(--btn)'},
+  ];
+  const chips=filterDefs.map(f=>{
+    const on=f.key===payFilter;
+    return `<span onclick="setPayFilter('${f.key}')" style="display:inline-flex;align-items:center;gap:4px;padding:6px 12px;border-radius:20px;font-size:12px;font-weight:500;cursor:pointer;border:1.5px solid ${on?'rgba(10,132,255,.4)':'transparent'};background:${on?'rgba(10,132,255,.15)':'var(--bg2)'};color:${on?'var(--btn)':'var(--hint)'};white-space:nowrap">${f.label}${f.count?`<span style="background:${on?'var(--btn)':'rgba(255,255,255,.15)'};color:#fff;font-size:10px;font-weight:700;padding:1px 5px;border-radius:99px">${f.count}</span>`:''}</span>`;
+  }).join('');
+
+  const statsHtml=`<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:12px">
+    <div class="card" style="margin:0;text-align:center"><div style="font-size:20px;font-weight:700;color:var(--orange)">${pending.length}</div><div style="font-size:10px;color:var(--hint);margin-top:2px">Kutmoqda</div></div>
+    <div class="card" style="margin:0;text-align:center"><div style="font-size:20px;font-weight:700;color:var(--green)">${confirmed.length}</div><div style="font-size:10px;color:var(--hint);margin-top:2px">Tasdiqlangan</div></div>
+    <div class="card" style="margin:0;text-align:center"><div style="font-size:20px;font-weight:700;color:var(--red)">${rejected.length}</div><div style="font-size:10px;color:var(--hint);margin-top:2px">Rad etilgan</div></div>
+  </div>
+  <div class="card" style="margin-bottom:12px;display:flex;justify-content:space-between;align-items:center">
+    <div style="font-size:12px;color:var(--hint)">💰 Jami tushumdur</div>
+    <b style="font-size:15px;color:var(--green)">${totalConfirmedAmt.toLocaleString()} so'm</b>
+  </div>`;
+
+  const list=(payFilter==='all'?allPayments:payFilter==='pending'?pending:payFilter==='confirmed'?confirmed:rejected);
+  const PSTATUS={pending:{bg:'rgba(255,159,10,.15)',c:'var(--orange)',t:'Kutmoqda'},confirmed:{bg:'rgba(48,209,88,.15)',c:'var(--green)',t:'Tasdiqlangan'},rejected:{bg:'rgba(255,69,58,.12)',c:'var(--red)',t:'Rad etilgan'}};
+  const cards=list.map(p=>{
+    const ps=PSTATUS[p.status]||PSTATUS.pending;
+    const isPending=p.status==='pending';
+    return `<div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px">
+        <div>
+          <div style="font-weight:700;font-size:15px">💳 To'lov #${p.id}</div>
+          <div style="font-size:11px;color:var(--hint);margin-top:2px">${new Date(p.createdAt).toLocaleString('ru-RU')}</div>
+        </div>
+        <span class="pill" style="background:${ps.bg};color:${ps.c}">${ps.t}</span>
+      </div>
+      <div style="background:var(--bg3);border-radius:10px;padding:10px;margin-bottom:10px">
+        <div style="display:flex;justify-content:space-between;margin-bottom:4px"><span style="font-size:12px;color:var(--hint)">🏥 Klinika</span><b style="font-size:13px">${p.clinic?.name||'—'}</b></div>
+        <div style="display:flex;justify-content:space-between;margin-bottom:4px"><span style="font-size:12px;color:var(--hint)">📋 Reja</span><b style="font-size:13px">${p.plan?.name||'—'}</b></div>
+        <div style="display:flex;justify-content:space-between"${p.status==='rejected'&&p.rejectionReason?';margin-bottom:4px':''}><span style="font-size:12px;color:var(--hint)">💰 Summa</span><b style="font-size:13px;color:var(--green)">${(p.amount||0).toLocaleString()} so'm</b></div>
+        ${p.status==='rejected'&&p.rejectionReason?`<div style="display:flex;justify-content:space-between"><span style="font-size:12px;color:var(--hint)">Sabab</span><b style="font-size:12px;color:var(--red);max-width:60%;text-align:right">${p.rejectionReason}</b></div>`:''}
+      </div>
+      ${p.screenshotFileId?`<div id="ss-${p.id}" style="margin-bottom:10px"><div style="font-size:12px;color:var(--hint);cursor:pointer;text-decoration:underline" onclick="loadScreenshot(${p.id})">📷 Screenshotni ko'rish</div></div>`:''}
+      ${isPending?`<div style="display:flex;gap:8px">
+        <button class="btn-p btn-sm" style="flex:1;padding:10px" onclick="confirmPayment(${p.id})">✅ Tasdiqlash</button>
+        <button class="btn-r btn-sm" style="flex:1;padding:10px" onclick="openRejectModal(${p.id})">❌ Rad etish</button>
+      </div>`:''}
+    </div>`;
+  }).join('');
+
+  el.innerHTML=`
+    ${statsHtml}
+    <div style="margin-bottom:10px;overflow-x:auto;display:flex;gap:6px;padding-bottom:2px">${chips}</div>
+    ${cards||`<div style="text-align:center;padding:40px 16px;color:var(--hint)">Bu kategoriyada to'lovlar yo'q</div>`}`;
+}
+
+function setPayFilter(f){payFilter=f;renderPayments();}
 
 async function loadScreenshot(id) {
   const el = document.getElementById('ss-'+id);
@@ -578,14 +624,17 @@ async function deletePromo(id) {
 const TABS=['stats','clinics','payments','plans','promos'];
 let curTab='stats';
 const loaded={};
-function switchTab(tab){
+function switchTab(tab,filter){
   curTab=tab;
   TABS.forEach(t=>{ document.getElementById('sec-'+t).classList.toggle('active',t===tab); document.getElementById('tab-'+t).classList.toggle('on',t===tab); });
-  if(!loaded[tab]){loaded[tab]=true;loadFn(tab);}
+  if(tab==='payments'&&filter){payFilter=filter;}
+  if(!loaded[tab]){loaded[tab]=true;loadFn(tab);}else if(tab==='payments'&&filter){renderPayments();}
 }
 function loadFn(tab){ if(tab==='stats')loadStats(); else if(tab==='clinics')loadClinics(); else if(tab==='payments')loadPayments(); else if(tab==='plans')loadPlans(); else if(tab==='promos')loadPromos(); }
 function refreshTab(){ delete loaded[curTab]; loadFn(curTab); }
-loaded['stats']=true; loadStats();
+// deep link: ?tab=payments opens payments tab
+const _urlTab=new URLSearchParams(window.location.search).get('tab');
+if(_urlTab&&TABS.includes(_urlTab)){switchTab(_urlTab);}else{loaded['stats']=true;loadStats();}
 </script>
 </body>
 </html>
