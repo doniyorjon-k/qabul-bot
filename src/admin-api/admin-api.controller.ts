@@ -12,6 +12,9 @@ import { ClinicSettingsService } from '../clinic-settings/clinic-settings.servic
 import { ClinicsService } from '../clinics/clinics.service';
 import { ClinicBotsService } from '../clinic-bots/clinic-bots.service';
 import { PlansService } from '../plans/plans.service';
+import { PromosService } from '../promos/promos.service';
+import { PaymentsService } from '../payments/payments.service';
+import { ClinicStatus } from '../database/entities/clinic.entity';
 
 @Controller('api/admin')
 export class AdminApiController {
@@ -25,6 +28,8 @@ export class AdminApiController {
     private readonly clinicsService: ClinicsService,
     private readonly clinicBotsService: ClinicBotsService,
     private readonly plansService: PlansService,
+    private readonly promosService: PromosService,
+    private readonly paymentsService: PaymentsService,
   ) {}
 
   private async validateAdmin(initData: string, clinicIdHeader: string): Promise<number> {
@@ -56,6 +61,11 @@ export class AdminApiController {
     if (!clinic.adminIds.includes(user.id)) throw new UnauthorizedException('Admin emas');
 
     return clinicId;
+  }
+
+  private parseAdminTelegramId(initData: string): number {
+    const params = new URLSearchParams(initData);
+    return JSON.parse(params.get('user') || '{}').id as number;
   }
 
   @Get('stats')
@@ -230,6 +240,52 @@ export class AdminApiController {
     const plans = await this.plansService.findAll();
     const endsAt = clinic.subscriptionEndsAt ?? clinic.trialEndsAt;
     const daysLeft = endsAt ? Math.ceil((endsAt.getTime() - Date.now()) / 86400000) : null;
-    return { status: clinic.status, endsAt, daysLeft, plans };
+    return { status: clinic.status, endsAt, daysLeft, currentPlan: clinic.currentPlan, plans };
+  }
+
+  @Post('start-payment')
+  async startPayment(
+    @Headers('x-init-data') initData: string,
+    @Headers('x-clinic-id') clinicIdHeader: string,
+    @Body('planId') planId: number,
+  ) {
+    const clinicId = await this.validateAdmin(initData, clinicIdHeader);
+    const adminTelegramId = this.parseAdminTelegramId(initData);
+    const clinic = await this.clinicsService.findById(clinicId);
+    const plan = await this.plansService.findById(Number(planId));
+    if (!plan) throw new BadRequestException('Tarif topilmadi');
+
+    // Same active plan — can't re-buy the same plan that's currently running
+    if (clinic.status === ClinicStatus.ACTIVE && clinic.currentPlan === plan.name) {
+      const endsAt = clinic.subscriptionEndsAt ?? clinic.trialEndsAt;
+      const dateStr = endsAt ? new Date(endsAt).toLocaleDateString('ru-RU') : '—';
+      return { ok: false, message: `✅ Bu tarif ${dateStr} gacha faol` };
+    }
+
+    // Pending payment already exists
+    const hasPending = await this.paymentsService.hasPendingByClinic(clinicId);
+    if (hasPending) {
+      return { ok: false, message: "⏳ Sizda jarayondagi to'lov mavjud. Super admin tasdiqlaguncha kuting." };
+    }
+
+    const promo = await this.promosService.findActive();
+    let amount = plan.price;
+    let promoLine = '';
+    if (promo) {
+      amount = this.promosService.applyDiscount(amount, promo);
+      promoLine = `\n🎁 Promo: *${promo.title}* — chegirma qo'llanildi!\n`;
+    }
+
+    const cardNum = process.env.PAYMENT_CARD_NUMBER || '—';
+    const cardOwner = process.env.PAYMENT_CARD_OWNER || '—';
+
+    this.clinicBotsService.setAdminPaySession(clinicId, adminTelegramId, plan.id, plan.name, amount);
+    await this.clinicBotsService.sendMessage(
+      clinicId, adminTelegramId,
+      `💳 *To'lov ma'lumotlari:*\n\n📋 Reja: *${plan.name}* (${plan.durationDays} kun)\n💰 Summa: *${amount.toLocaleString()} so'm*${promoLine}\n\n💳 Karta: \`${cardNum}\`\n👤 Egasi: *${cardOwner}*\n\nPul o'tkazganingizdan so'ng *skrinshotni yuboring:*`,
+      { parse_mode: 'Markdown', reply_markup: { inline_keyboard: [[{ text: '❌ Bekor qilish', callback_data: 'pay:cancel' }]] } },
+    );
+
+    return { ok: true };
   }
 }

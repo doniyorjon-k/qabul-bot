@@ -75,8 +75,15 @@ interface ReviewSession {
 
 // Module-level session maps keyed by `${clinicId}:${userId}`
 const userSessions = new Map<string, UserSession>();
-const adminSessionMap = new Map<string, AdminSession>();
+export const adminSessionMap = new Map<string, AdminSession>();
 const reviewSessionMap = new Map<string, ReviewSession>();
+
+export function setClinicAdminPaySession(
+  clinicId: number, userId: number,
+  planId: number, planName: string, amount: number,
+): void {
+  adminSessionMap.set(`${clinicId}:${userId}`, { payStep: 'send_screenshot', payPlanId: planId, payPlanName: planName, payAmount: amount });
+}
 
 const UZ_MONTHS = [
   'Yanvar', 'Fevral', 'Mart', 'Aprel', 'May', 'Iyun',
@@ -616,15 +623,23 @@ export function setupBotHandlers(
 
   bot.action(/^pay:plan:(\d+)$/, async (ctx) => {
     if (!isAdmin(ctx.from.id)) { await ctx.answerCbQuery(); return; }
+    const planId = parseInt((ctx as any).match[1]);
+    const plan = await services.plansService.findById(planId);
+    if (!plan) { await ctx.answerCbQuery(); return; }
+    const currentClinic = await services.clinicsService.findById(clinicId);
+    // If this exact plan is already active — just inform, allow stacking different plans
+    if (currentClinic?.status === ClinicStatus.ACTIVE && currentClinic?.currentPlan === plan.name) {
+      const endsAt = currentClinic.subscriptionEndsAt ?? currentClinic.trialEndsAt;
+      const dateStr = endsAt ? new Date(endsAt).toLocaleDateString('ru-RU') : '—';
+      await ctx.answerCbQuery(`✅ Bu tarif ${dateStr} gacha faol`, { show_alert: true });
+      return;
+    }
     const hasPending = await services.paymentsService.hasPendingByClinic(clinicId);
     if (hasPending) {
       await ctx.answerCbQuery('⏳ Sizda jarayondagi to\'lov mavjud. Super admin tasdiqlaguncha kuting.', { show_alert: true });
       return;
     }
     await ctx.answerCbQuery();
-    const planId = parseInt((ctx as any).match[1]);
-    const plan = await services.plansService.findById(planId);
-    if (!plan) return;
     const promo = await services.promosService.findActive();
     let amount = plan.price;
     let promoLine = '';

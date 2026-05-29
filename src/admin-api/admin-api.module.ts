@@ -9,11 +9,14 @@ import { ClinicSettingsModule } from '../clinic-settings/clinic-settings.module'
 import { ClinicsModule } from '../clinics/clinics.module';
 import { ClinicBotsModule } from '../clinic-bots/clinic-bots.module';
 import { PlansModule } from '../plans/plans.module';
+import { PromosModule } from '../promos/promos.module';
+import { PaymentsModule } from '../payments/payments.module';
 
 @Module({
   imports: [
     AppointmentsModule, TimeSlotsModule, UsersModule, ReviewsModule,
-    WorkScheduleModule, ClinicSettingsModule, ClinicsModule, ClinicBotsModule, PlansModule,
+    WorkScheduleModule, ClinicSettingsModule, ClinicsModule, ClinicBotsModule,
+    PlansModule, PromosModule, PaymentsModule,
   ],
   controllers: [AdminApiController],
 })

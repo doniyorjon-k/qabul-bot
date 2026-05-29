@@ -481,6 +481,7 @@ loaded['today']=true; loadToday();
 
 async function loadSub(){
   const el=document.getElementById('sub-content');
+  el.innerHTML='<div class="spin"></div>';
   try{
     const r=await fetch('/api/admin/subscription',{headers:{'x-init-data':initData,'x-clinic-id':clinicId}});
     const d=await r.json();
@@ -492,13 +493,24 @@ async function loadSub(){
     const endsLine=d.endsAt?`<div style="color:var(--hint);font-size:12px;margin-top:2px">📅 ${new Date(d.endsAt).toLocaleDateString('uz-UZ')}</div>`:'';
     let plansHtml='';
     if(d.plans&&d.plans.length){
-      plansHtml=`<div class="sec-t">Tarifni yangilash</div>`+d.plans.map(p=>`
-        <div class="card" style="margin-bottom:8px">
-          <div style="font-weight:600;font-size:15px">${p.name}</div>
-          <div style="color:var(--hint);font-size:13px;margin:4px 0">${p.durationDays} kun</div>
-          <div style="font-size:17px;font-weight:700;color:var(--btn);margin-bottom:10px">${p.price.toLocaleString()} so'm</div>
-          <button class="btn-p" onclick="tg.sendData(JSON.stringify({action:'pay_plan',planId:${p.id}}))">Tanlash</button>
-        </div>`).join('')+
+      const endsDateStr=d.endsAt?new Date(d.endsAt).toLocaleDateString('ru-RU'):'—';
+      plansHtml=`<div class="sec-t">Tarifni yangilash</div>`+d.plans.map(p=>{
+        const isActivePlan=d.status==='active'&&d.currentPlan===p.name;
+        return `<div class="card" style="margin-bottom:8px${isActivePlan?';border-color:rgba(48,209,88,.35)':''}">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start">
+            <div>
+              <div style="font-weight:600;font-size:15px">${p.name}</div>
+              <div style="color:var(--hint);font-size:13px;margin:4px 0">${p.durationDays} kun</div>
+              <div style="font-size:17px;font-weight:700;color:var(--btn)">${p.price.toLocaleString()} so'm</div>
+            </div>
+            ${isActivePlan?`<span class="pill" style="background:rgba(48,209,88,.15);color:var(--green);flex-shrink:0;margin-top:2px">Faol</span>`:''}
+          </div>
+          ${isActivePlan
+            ?`<div style="margin-top:10px;font-size:13px;color:var(--green)">✅ Bu tarif ${endsDateStr} gacha faol</div>`
+            :`<button class="btn-p" style="margin-top:12px" onclick="selectPlan(${p.id})">Tanlash</button>`
+          }
+        </div>`;
+      }).join('')+
         `<a href="https://t.me/doniyorjon_k" style="display:block;text-align:center;color:var(--hint);font-size:13px;margin-top:12px;text-decoration:none">📞 Adminga murojaat</a>`;
     }
     el.innerHTML=`
@@ -509,6 +521,24 @@ async function loadSub(){
       </div>
       ${plansHtml}`;
   }catch(e){el.innerHTML='<div style="color:var(--red);padding:20px;text-align:center">Yuklashda xato</div>';}
+}
+
+async function selectPlan(planId){
+  try{
+    const r=await fetch('/api/admin/start-payment',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','x-init-data':initData,'x-clinic-id':clinicId},
+      body:JSON.stringify({planId}),
+    });
+    const d=await r.json();
+    if(!d.ok){
+      tg.showAlert(d.message||'Xato yuz berdi');
+      return;
+    }
+    tg.showAlert("✅ To'lov ma'lumotlari botga yuborildi. Bot orqali skrinshotni yuboring.",()=>tg.close());
+  }catch(e){
+    tg.showAlert('Xato: '+e.message);
+  }
 }
 </script>
 </body>

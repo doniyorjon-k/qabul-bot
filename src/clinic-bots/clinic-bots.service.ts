@@ -13,7 +13,7 @@ import { ReviewsService } from '../reviews/reviews.service';
 import { PaymentsService } from '../payments/payments.service';
 import { PlansService } from '../plans/plans.service';
 import { PromosService } from '../promos/promos.service';
-import { setupBotHandlers, BotServices } from './bot-factory';
+import { setupBotHandlers, BotServices, setClinicAdminPaySession } from './bot-factory';
 import { Clinic } from '../database/entities/clinic.entity';
 import * as https from 'https';
 import * as http from 'http';
@@ -150,6 +150,10 @@ export class ClinicBotsService implements OnModuleInit {
         this.logger.error(`sendToAdminsPreferAdminBot: clinic ${clinic.id} admin ${adminId} ga xabar yuborishda xato: ${err.message}`);
       }
     }
+  }
+
+  setAdminPaySession(clinicId: number, userId: number, planId: number, planName: string, amount: number): void {
+    setClinicAdminPaySession(clinicId, userId, planId, planName, amount);
   }
 
   keepAlive() {
