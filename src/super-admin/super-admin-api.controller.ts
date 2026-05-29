@@ -251,12 +251,14 @@ export class SuperAdminApiController {
     this.validate(d);
     const payment = await this.paymentsService.findById(id);
     if (!payment?.screenshotFileId) throw new BadRequestException('Screenshot topilmadi');
+    // file_id belongs to clinic bot — must use clinic bot token for getFile
+    const clinicToken = payment.clinic.botToken;
     const getFileRes = await fetch(
-      `https://api.telegram.org/bot${this.botToken}/getFile?file_id=${payment.screenshotFileId}`,
+      `https://api.telegram.org/bot${clinicToken}/getFile?file_id=${payment.screenshotFileId}`,
     );
     const json: any = await getFileRes.json();
     if (!json.ok) throw new BadRequestException('Telegram faylni topamadi');
-    const fileUrl = `https://api.telegram.org/file/bot${this.botToken}/${json.result.file_path}`;
+    const fileUrl = `https://api.telegram.org/file/bot${clinicToken}/${json.result.file_path}`;
     res.redirect(fileUrl);
   }
 
@@ -271,8 +273,11 @@ export class SuperAdminApiController {
       try {
         await this.clinicBotsService.sendMessage(
           payment.clinic.id, aid,
-          `✅ *To\'lovingiz tasdiqlandi!*\n\n📋 ${payment.plan.name} (${payment.plan.durationDays} kun)\n💰 ${payment.amount.toLocaleString()} so\'m\n\nObunangiz faollashdi!`,
-          { parse_mode: 'Markdown' },
+          `✅ *To\'lovingiz tasdiqlandi!*\n\n📋 ${payment.plan.name} (${payment.plan.durationDays} kun)\n💰 ${payment.amount.toLocaleString()} so\'m\n\n🎉 Obunangiz faollashdi! Admin panelga kirish uchun quyidagi tugmani bosing.`,
+          {
+            parse_mode: 'Markdown',
+            reply_markup: { inline_keyboard: [[{ text: '👨‍⚕️ /admin — Admin panelni ochish', callback_data: 'adm:open' }]] },
+          },
         );
       } catch {}
     }
@@ -289,12 +294,17 @@ export class SuperAdminApiController {
     const payment = await this.paymentsService.findById(id);
     if (payment) {
       await this.paymentsService.reject(id, body.reason || '');
+      const plans = await this.plansService.findAll();
+      const inlineKeyboard = [
+        ...plans.map(p => ([{ text: `${p.name} — ${p.price.toLocaleString()} so'm (${p.durationDays} kun)`, callback_data: `pay:plan:${p.id}` }])),
+        [{ text: '📞 Adminga murojaat', url: 'https://t.me/doniyorjon_k' }],
+      ];
       for (const aid of payment.clinic.adminIds) {
         try {
           await this.clinicBotsService.sendMessage(
             payment.clinic.id, aid,
-            `❌ *To\'lovingiz rad etildi.*\nSabab: ${body.reason || '—'}`,
-            { parse_mode: 'Markdown' },
+            `❌ *To\'lovingiz rad etildi.*\n\nSabab: ${body.reason || '—'}\n\nQayta to\'lov qilish uchun tarifni tanlang:`,
+            { parse_mode: 'Markdown', reply_markup: { inline_keyboard: inlineKeyboard } },
           );
         } catch {}
       }

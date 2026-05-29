@@ -554,6 +554,15 @@ export function setupBotHandlers(
     await ctx.editMessageText('👨‍⚕️ *Admin panel*', { parse_mode: 'Markdown', ...adminMainKb(miniAppUrl) });
   });
 
+  bot.action('adm:open', async (ctx) => {
+    await ctx.answerCbQuery();
+    if (!isAdmin(ctx.from.id)) return;
+    delASess(ctx.from.id);
+    await ctx.editMessageText('👨‍⚕️ *Admin panel*', { parse_mode: 'Markdown', ...adminMainKb(miniAppUrl) }).catch(() =>
+      ctx.reply('👨‍⚕️ *Admin panel*', { parse_mode: 'Markdown', ...adminMainKb(miniAppUrl) }),
+    );
+  });
+
   bot.action('adm:subscription', async (ctx) => {
     await ctx.answerCbQuery();
     if (!isAdmin(ctx.from.id)) return;
@@ -603,8 +612,13 @@ export function setupBotHandlers(
   bot.action('pay:start', async (ctx) => { await ctx.answerCbQuery(); await handlePaid(ctx); });
 
   bot.action(/^pay:plan:(\d+)$/, async (ctx) => {
+    if (!isAdmin(ctx.from.id)) { await ctx.answerCbQuery(); return; }
+    const hasPending = await services.paymentsService.hasPendingByClinic(clinicId);
+    if (hasPending) {
+      await ctx.answerCbQuery('⏳ Sizda jarayondagi to\'lov mavjud. Super admin tasdiqlaguncha kuting.', { show_alert: true });
+      return;
+    }
     await ctx.answerCbQuery();
-    if (!isAdmin(ctx.from.id)) return;
     const planId = parseInt((ctx as any).match[1]);
     const plan = await services.plansService.findById(planId);
     if (!plan) return;
