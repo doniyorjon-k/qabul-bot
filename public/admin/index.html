@@ -524,6 +524,8 @@ const DAY_LABELS = ['','Du','Se','Ch','Pa','Ju','Sh','Ya'];
 let scheduleData=null, clinicData=null, pendingHours=null, servicesData=[], subData=null;
 let analyticsTab='revenue', _revData=null, _statsData=null;
 let openSections=new Set(['svc','sub']);
+let calViewDate=new Date();
+const MONTH_UZ=['Yanvar','Fevral','Mart','Aprel','May','Iyun','Iyul','Avgust','Sentabr','Oktabr','Noyabr','Dekabr'];
 
 function allTimeSlots() {
   const s=[];
@@ -532,22 +534,33 @@ function allTimeSlots() {
 }
 
 function buildCalendar(sched) {
-  const today=new Date();
-  const dow0=today.getDay()===0?6:today.getDay()-1;
-  const monday=new Date(today); monday.setDate(today.getDate()-dow0);
+  const year=calViewDate.getFullYear(), month=calViewDate.getMonth();
+  const firstDay=new Date(year,month,1);
+  const daysInMonth=new Date(year,month+1,0).getDate();
+  const todayStr=toDateStr(new Date());
+  const firstDow=firstDay.getDay()===0?6:firstDay.getDay()-1;
   const cells=[];
-  for(let i=0;i<dow0;i++) cells.push('<div></div>');
-  for(let i=0;i<21;i++){
-    const d=new Date(monday); d.setDate(monday.getDate()+i);
+  for(let i=0;i<firstDow;i++) cells.push('<div></div>');
+  for(let day=1;day<=daysInMonth;day++){
+    const d=new Date(year,month,day);
     const ds=toDateStr(d);
-    const isToday=ds===toDateStr(new Date());
+    const isToday=ds===todayStr;
     const dow=d.getDay()===0?7:d.getDay();
     const isWork=(sched.extraWorkDates||[]).includes(ds)||((sched.workDays||[]).includes(dow)&&!(sched.blockedDates||[]).includes(ds));
     cells.push(`<div id="cal-${ds}" onclick="toggleSpecialDate('${ds}')" style="border-radius:8px;padding:6px 2px;cursor:pointer;background:${isWork?'rgba(48,209,88,.18)':'rgba(255,69,58,.13)'};border:1.5px solid ${isToday?'var(--btn)':'transparent'};text-align:center">
-      <div style="font-size:13px;font-weight:${isToday?700:400}">${d.getDate()}</div>
+      <div style="font-size:13px;font-weight:${isToday?700:400}">${day}</div>
     </div>`);
   }
   return cells.join('');
+}
+
+function calPrevMonth(){
+  calViewDate=new Date(calViewDate.getFullYear(),calViewDate.getMonth()-1,1);
+  renderSettings();
+}
+function calNextMonth(){
+  calViewDate=new Date(calViewDate.getFullYear(),calViewDate.getMonth()+1,1);
+  renderSettings();
 }
 
 async function toggleSpecialDate(ds) {
@@ -664,8 +677,14 @@ function renderSettings() {
       <button class="btn-p" onclick="saveHours()">💾 Soatlarni saqlash</button>
     </div>`;
 
+  const calTitle=`${MONTH_UZ[calViewDate.getMonth()]} ${calViewDate.getFullYear()}`;
   const specialBody = `
     <div style="font-size:12px;color:var(--hint);margin-bottom:10px">Bosing: ish kuni ↔ dam olish kuni</div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+      <button onclick="calPrevMonth()" style="background:var(--bg3,var(--border));border:none;color:var(--fg);font-size:18px;font-weight:700;cursor:pointer;padding:2px 10px;border-radius:8px;line-height:1.8">‹</button>
+      <span style="font-size:14px;font-weight:600">${calTitle}</span>
+      <button onclick="calNextMonth()" style="background:var(--bg3,var(--border));border:none;color:var(--fg);font-size:18px;font-weight:700;cursor:pointer;padding:2px 10px;border-radius:8px;line-height:1.8">›</button>
+    </div>
     <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;text-align:center">
       ${['Du','Se','Ch','Pa','Ju','Sh','Ya'].map(d=>`<div style="font-size:10px;color:var(--hint);font-weight:600;padding-bottom:4px">${d}</div>`).join('')}
       ${buildCalendar(scheduleData)}
