@@ -33,6 +33,8 @@ export class PublicApiController {
       slug: p.slug,
       price: p.price,
       durationDays: p.durationDays,
+      isMostPopular: p.isMostPopular,
+      bonus: p.bonus,
     }));
   }
 

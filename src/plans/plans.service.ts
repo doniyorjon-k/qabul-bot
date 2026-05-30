@@ -10,12 +10,16 @@ export class PlansService implements OnModuleInit {
   ) {}
 
   async onModuleInit() {
-    const count = await this.repo.count();
-    if (count === 0) {
-      await this.repo.save([
-        this.repo.create({ name: 'Oylik', slug: 'monthly', price: 150000, durationDays: 30, isActive: true }),
-        this.repo.create({ name: 'Yillik', slug: 'yearly', price: 1500000, durationDays: 365, isActive: true }),
-      ]);
+    const defaults = [
+      { name: 'Oylik', slug: 'monthly', price: 149000, durationDays: 30, isActive: true, isMostPopular: false, bonus: null },
+      { name: 'Yarim yillik', slug: 'semi-yearly', price: 699000, durationDays: 180, isActive: true, isMostPopular: true, bonus: 'Landing page bepul' },
+      { name: 'Yillik', slug: 'yearly', price: 1190000, durationDays: 365, isActive: true, isMostPopular: false, bonus: 'Landing page bepul' },
+    ];
+    for (const d of defaults) {
+      const existing = await this.repo.findOne({ where: { slug: d.slug } });
+      if (!existing) {
+        await this.repo.save(this.repo.create(d));
+      }
     }
   }
 
@@ -23,11 +27,23 @@ export class PlansService implements OnModuleInit {
     return this.repo.find({ where: { isActive: true }, order: { durationDays: 'ASC' } });
   }
 
+  async findAllIncludeInactive(): Promise<Plan[]> {
+    return this.repo.find({ order: { durationDays: 'ASC' } });
+  }
+
   async findById(id: number): Promise<Plan | null> {
     return this.repo.findOne({ where: { id } });
   }
 
+  async create(data: Partial<Plan>): Promise<Plan> {
+    return this.repo.save(this.repo.create(data));
+  }
+
   async update(id: number, data: Partial<Plan>): Promise<void> {
     await this.repo.update(id, data);
+  }
+
+  async delete(id: number): Promise<void> {
+    await this.repo.delete(id);
   }
 }

@@ -20,6 +20,12 @@ export class Plan {
   @Column({ default: true })
   isActive: boolean;
 
+  @Column({ default: false })
+  isMostPopular: boolean;
+
+  @Column({ nullable: true, type: 'text' })
+  bonus: string | null;
+
   @CreateDateColumn()
   createdAt: Date;
 }

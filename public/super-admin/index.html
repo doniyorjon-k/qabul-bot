@@ -542,21 +542,66 @@ async function loadPlans() {
   el.innerHTML='<div class="spin"></div>';
   try {
     const plans=await api('/plans');
-    el.innerHTML=plans.map(p=>`<div class="card">
-      <div style="font-weight:700;font-size:15px;margin-bottom:14px">📋 ${p.name}</div>
-      <label class="f-lbl">Narxi (so'm)</label>
-      <input class="f-inp" id="plan-price-${p.id}" value="${p.price}" type="number"/>
-      <label class="f-lbl">Davomiyligi (kun)</label>
-      <input class="f-inp" id="plan-days-${p.id}" value="${p.durationDays}" type="number"/>
-      <button class="btn-p btn-sm" onclick="savePlan(${p.id})">💾 Saqlash</button>
-    </div>`).join('');
+    el.innerHTML=`<button class="btn-p" style="margin-bottom:12px" onclick="openNewPlanModal()">➕ Yangi tarif</button>`+
+    plans.map(p=>{
+      const perMonth=p.durationDays>30?Math.round(p.price/(p.durationDays/30)).toLocaleString():null;
+      return `<div class="card" style="${p.isMostPopular?'border-color:rgba(10,132,255,.4)':''}">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px">
+          <div>
+            <div style="font-weight:700;font-size:15px">${p.name}${p.isMostPopular?` <span class="pill" style="background:rgba(10,132,255,.15);color:var(--btn);font-size:9px;vertical-align:middle">Eng mashhuri</span>`:''}</div>
+            <div style="font-size:13px;font-weight:700;color:var(--green);margin-top:4px">${p.price.toLocaleString()} so'm${perMonth?` <span style="font-size:11px;color:var(--hint);font-weight:400">· ${perMonth}/oy</span>`:''}</div>
+            <div style="font-size:12px;color:var(--hint);margin-top:2px">${p.durationDays} kun${p.bonus?` · 🎁 ${p.bonus}`:''}</div>
+          </div>
+          <span class="pill" style="background:${p.isActive?'rgba(48,209,88,.15)':'var(--bg3)'};color:${p.isActive?'var(--green)':'var(--hint)'}">${p.isActive?'Faol':'Nofaol'}</span>
+        </div>
+        <div style="display:flex;gap:8px">
+          <button class="btn-g btn-sm" style="flex:1" onclick='openEditPlanModal(${JSON.stringify(p)})'>✏️ Tahrirlash</button>
+          <button class="btn-r btn-sm" onclick="deletePlan(${p.id},'${p.name.replace(/'/g,"\\'")}')">🗑</button>
+        </div>
+      </div>`;
+    }).join('')||'<p style="color:var(--hint);text-align:center;margin-top:32px">Tarif yo\'q</p>';
   } catch(e){el.innerHTML=`<p style="color:var(--red);text-align:center;margin-top:48px">${e.message}</p>`;}
 }
-async function savePlan(id) {
-  const price=parseInt(document.getElementById(`plan-price-${id}`).value);
-  const durationDays=parseInt(document.getElementById(`plan-days-${id}`).value);
-  try { await api(`/plans/${id}`,{method:'PUT',body:JSON.stringify({price,durationDays})}); showCustomAlert('✅ Saqlandi'); }
+
+function planFormHtml(p={}) {
+  return `
+    <label class="f-lbl">Nomi</label><input class="f-inp" id="pf-name" value="${p.name||''}" placeholder="Oylik"/>
+    <label class="f-lbl">Narxi (so'm)</label><input class="f-inp" id="pf-price" value="${p.price||''}" type="number" placeholder="149000"/>
+    <label class="f-lbl">Davomiyligi (kun)</label><input class="f-inp" id="pf-days" value="${p.durationDays||''}" type="number" placeholder="30"/>
+    <label class="f-lbl">Bonus (ixtiyoriy)</label><input class="f-inp" id="pf-bonus" value="${p.bonus||''}" placeholder="Landing page bepul"/>
+    <label style="display:flex;align-items:center;gap:10px;margin-bottom:10px;cursor:pointer;font-size:14px"><input type="checkbox" id="pf-popular" ${p.isMostPopular?'checked':''}/> ⭐ Eng mashhuri</label>
+    <label style="display:flex;align-items:center;gap:10px;margin-bottom:10px;cursor:pointer;font-size:14px"><input type="checkbox" id="pf-active" ${p.isActive!==false?'checked':''}/> Faol</label>`;
+}
+function planFormData() {
+  return {name:document.getElementById('pf-name').value.trim(),price:parseInt(document.getElementById('pf-price').value)||0,durationDays:parseInt(document.getElementById('pf-days').value)||0,bonus:document.getElementById('pf-bonus').value.trim()||null,isMostPopular:document.getElementById('pf-popular').checked,isActive:document.getElementById('pf-active').checked};
+}
+function openNewPlanModal() {
+  openModal(`<div style="font-weight:700;font-size:17px;margin-bottom:16px">➕ Yangi tarif</div>${planFormHtml()}
+    <div style="display:flex;gap:8px;margin-top:4px"><button class="btn-g" style="flex:1" onclick="closeModal()">Bekor</button><button class="btn-p" style="flex:1" onclick="createPlan()">Yaratish</button></div>`);
+}
+function openEditPlanModal(p) {
+  const data=typeof p==='string'?JSON.parse(p):p;
+  openModal(`<div style="font-weight:700;font-size:17px;margin-bottom:16px">✏️ Tarifni tahrirlash</div>${planFormHtml(data)}
+    <div style="display:flex;gap:8px;margin-top:4px"><button class="btn-g" style="flex:1" onclick="closeModal()">Bekor</button><button class="btn-p" style="flex:1" onclick="savePlan(${data.id})">💾 Saqlash</button></div>`);
+}
+async function createPlan() {
+  const data=planFormData();
+  if(!data.name||!data.price||!data.durationDays){showCustomAlert('Nomi, narxi va davomiyligi kiritilishi shart');return;}
+  try { await api('/plans',{method:'POST',body:JSON.stringify(data)}); closeModal(); showCustomAlert('✅ Tarif yaratildi'); loadPlans(); }
   catch(e){showCustomAlert('❌ '+e.message);}
+}
+async function savePlan(id) {
+  const data=planFormData();
+  if(!data.name||!data.price||!data.durationDays){showCustomAlert('Nomi, narxi va davomiyligi kiritilishi shart');return;}
+  try { await api(`/plans/${id}`,{method:'PUT',body:JSON.stringify(data)}); closeModal(); showCustomAlert('✅ Saqlandi'); loadPlans(); }
+  catch(e){showCustomAlert('❌ '+e.message);}
+}
+async function deletePlan(id,name) {
+  showCustomConfirm(`"${name}" tarifini o'chirmoqchimisiz?`, async ok=>{
+    if(!ok)return;
+    try { await api(`/plans/${id}`,{method:'DELETE'}); showCustomAlert('✅ O\'chirildi'); loadPlans(); }
+    catch(e){showCustomAlert('❌ '+e.message);}
+  });
 }
 
 // ── PROMOS ────────────────────────────────────────────────────────────

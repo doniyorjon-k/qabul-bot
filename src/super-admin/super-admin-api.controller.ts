@@ -322,13 +322,44 @@ export class SuperAdminApiController {
   @Get('plans')
   async getPlans(@Headers('x-init-data') d: string) {
     this.validate(d);
-    return this.plansService.findAll();
+    return this.plansService.findAllIncludeInactive();
+  }
+
+  @Post('plans')
+  async createPlan(@Body() body: any, @Headers('x-init-data') d: string) {
+    this.validate(d);
+    if (!body.name || !body.price || !body.durationDays) {
+      throw new BadRequestException('name, price, durationDays majburiy');
+    }
+    return this.plansService.create({
+      name: body.name,
+      slug: body.slug || body.name.toLowerCase().replace(/\s+/g, '-'),
+      price: Number(body.price),
+      durationDays: Number(body.durationDays),
+      isMostPopular: !!body.isMostPopular,
+      bonus: body.bonus || null,
+      isActive: body.isActive !== false,
+    });
   }
 
   @Put('plans/:id')
   async updatePlan(@Param('id', ParseIntPipe) id: number, @Body() body: any, @Headers('x-init-data') d: string) {
     this.validate(d);
-    await this.plansService.update(id, body);
+    await this.plansService.update(id, {
+      name: body.name,
+      price: body.price !== undefined ? Number(body.price) : undefined,
+      durationDays: body.durationDays !== undefined ? Number(body.durationDays) : undefined,
+      isMostPopular: body.isMostPopular !== undefined ? !!body.isMostPopular : undefined,
+      bonus: body.bonus !== undefined ? (body.bonus || null) : undefined,
+      isActive: body.isActive !== undefined ? !!body.isActive : undefined,
+    });
+    return { ok: true };
+  }
+
+  @Delete('plans/:id')
+  async deletePlan(@Param('id', ParseIntPipe) id: number, @Headers('x-init-data') d: string) {
+    this.validate(d);
+    await this.plansService.delete(id);
     return { ok: true };
   }
 

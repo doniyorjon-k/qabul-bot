@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Qabulim — Klinikangiz uchun Telegram Bot</title>
+  <meta name="description" content="Bemorlar qabulini Telegram orqali boshqaring. Avtomatik eslatmalar, admin panel, daromad hisobi."/>
+  <style>
+    :root{--bg:#0d0d0f;--bg2:#18181b;--bg3:#242428;--txt:#f2f2f7;--hint:#8e8e93;--btn:#0a84ff;--green:#30d158;--orange:#ff9f0a;--red:#ff453a;--border:rgba(255,255,255,.08);--r:16px}
+    *{box-sizing:border-box;margin:0;padding:0}
+    html{scroll-behavior:smooth}
+    body{background:var(--bg);color:var(--txt);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;line-height:1.6;overflow-x:hidden}
+    a{color:var(--btn);text-decoration:none}
+
+    /* NAV */
+    nav{position:sticky;top:0;z-index:100;background:rgba(13,13,15,.85);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);border-bottom:1px solid var(--border);padding:0 24px;display:flex;align-items:center;justify-content:space-between;height:60px}
+    .logo{font-size:18px;font-weight:800;letter-spacing:-.4px}
+    .logo span{color:var(--btn)}
+    .nav-cta{background:var(--btn);color:#fff;border:none;border-radius:10px;padding:8px 18px;font-size:14px;font-weight:600;cursor:pointer;text-decoration:none;display:inline-block}
+
+    /* HERO */
+    .hero{padding:80px 24px 64px;text-align:center;max-width:720px;margin:0 auto}
+    .hero-badge{display:inline-block;background:rgba(10,132,255,.12);color:var(--btn);border:1px solid rgba(10,132,255,.25);border-radius:99px;font-size:12px;font-weight:600;padding:5px 14px;margin-bottom:22px;letter-spacing:.3px}
+    .hero h1{font-size:clamp(32px,8vw,56px);font-weight:800;line-height:1.1;letter-spacing:-1.5px;margin-bottom:18px}
+    .hero h1 span{background:linear-gradient(135deg,var(--btn),#6e3cf6);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+    .hero p{font-size:17px;color:var(--hint);margin-bottom:36px;max-width:540px;margin-left:auto;margin-right:auto}
+    .hero-btns{display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
+    .btn-hero{background:var(--btn);color:#fff;border:none;border-radius:14px;padding:14px 28px;font-size:15px;font-weight:700;cursor:pointer;text-decoration:none;display:inline-block;transition:opacity .15s}
+    .btn-hero:hover{opacity:.88}
+    .btn-outline{background:transparent;color:var(--txt);border:1.5px solid var(--border);border-radius:14px;padding:13px 28px;font-size:15px;font-weight:600;cursor:pointer;text-decoration:none;display:inline-block;transition:border-color .15s}
+    .btn-outline:hover{border-color:rgba(255,255,255,.25)}
+
+    /* FEATURES */
+    .section{padding:64px 24px;max-width:1100px;margin:0 auto}
+    .sec-label{font-size:11px;font-weight:700;color:var(--btn);text-transform:uppercase;letter-spacing:1.2px;margin-bottom:12px;text-align:center}
+    .sec-title{font-size:clamp(24px,5vw,38px);font-weight:800;letter-spacing:-.8px;text-align:center;margin-bottom:8px}
+    .sec-sub{font-size:15px;color:var(--hint);text-align:center;max-width:480px;margin:0 auto 48px}
+    .features{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px}
+    .feat{background:var(--bg2);border:1px solid var(--border);border-radius:20px;padding:24px}
+    .feat-icon{font-size:32px;margin-bottom:14px}
+    .feat h3{font-size:16px;font-weight:700;margin-bottom:8px;letter-spacing:-.2px}
+    .feat p{font-size:13px;color:var(--hint);line-height:1.6}
+
+    /* PRICING */
+    .pricing-wrap{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px;margin-top:0}
+    .plan-card{background:var(--bg2);border:1px solid var(--border);border-radius:20px;padding:28px 24px;position:relative;display:flex;flex-direction:column}
+    .plan-card.popular{border-color:rgba(10,132,255,.45);background:linear-gradient(145deg,rgba(10,132,255,.08),var(--bg2))}
+    .plan-badge{position:absolute;top:-1px;left:50%;transform:translateX(-50%);background:var(--btn);color:#fff;font-size:11px;font-weight:700;padding:4px 16px;border-radius:0 0 10px 10px;white-space:nowrap;letter-spacing:.3px}
+    .plan-name{font-size:18px;font-weight:700;margin-bottom:4px}
+    .plan-price{font-size:38px;font-weight:800;letter-spacing:-1.5px;color:var(--txt);line-height:1.1;margin:16px 0 4px}
+    .plan-price sup{font-size:16px;vertical-align:top;margin-top:8px;font-weight:600;color:var(--hint)}
+    .plan-price sub{font-size:13px;color:var(--hint);font-weight:400;letter-spacing:0}
+    .plan-per-month{font-size:12px;color:var(--hint);margin-bottom:16px}
+    .plan-days{font-size:13px;color:var(--hint);padding:8px 0;border-top:1px solid var(--border);border-bottom:1px solid var(--border);margin-bottom:14px}
+    .plan-bonus{font-size:13px;color:var(--orange);font-weight:600;margin-bottom:20px;display:flex;align-items:center;gap:6px}
+    .plan-bonus svg{flex-shrink:0}
+    .plan-btn{background:var(--btn);color:#fff;border:none;border-radius:12px;padding:13px;font-size:14px;font-weight:700;cursor:pointer;width:100%;margin-top:auto;transition:opacity .15s;text-decoration:none;display:block;text-align:center}
+    .plan-btn:hover{opacity:.88}
+    .plan-btn.outline{background:transparent;border:1.5px solid var(--border);color:var(--txt)}
+    .plan-btn.outline:hover{border-color:rgba(255,255,255,.25)}
+    .spin{width:24px;height:24px;border:2.5px solid rgba(255,255,255,.08);border-top-color:var(--btn);border-radius:50%;animation:sp .7s linear infinite;margin:40px auto}
+    @keyframes sp{to{transform:rotate(360deg)}}
+
+    /* STEPS */
+    .steps{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px}
+    .step{background:var(--bg2);border:1px solid var(--border);border-radius:20px;padding:24px;text-align:center}
+    .step-num{width:40px;height:40px;border-radius:12px;background:rgba(10,132,255,.15);color:var(--btn);font-size:16px;font-weight:800;display:flex;align-items:center;justify-content:center;margin:0 auto 14px}
+    .step h3{font-size:15px;font-weight:700;margin-bottom:6px}
+    .step p{font-size:13px;color:var(--hint)}
+
+    /* CTA SECTION */
+    .cta-section{padding:64px 24px;text-align:center;max-width:600px;margin:0 auto}
+    .cta-section h2{font-size:clamp(24px,5vw,36px);font-weight:800;letter-spacing:-.8px;margin-bottom:12px}
+    .cta-section p{font-size:15px;color:var(--hint);margin-bottom:32px}
+
+    /* FOOTER */
+    footer{border-top:1px solid var(--border);padding:24px;text-align:center;font-size:13px;color:var(--hint)}
+
+    /* DIVIDER */
+    .divider{width:100%;height:1px;background:var(--border);margin:0 24px;width:calc(100% - 48px)}
+
+    @media(max-width:600px){
+      .hero{padding:56px 20px 48px}
+      .section{padding:48px 20px}
+      .plan-price{font-size:30px}
+    }
+  </style>
+</head>
+<body>
+
+<nav>
+  <div class="logo">Qabu<span>lim</span></div>
+  <a href="#pricing" class="nav-cta">Boshlash</a>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-badge">Telegram Mini App + Bot</div>
+  <h1>Klinikangiz uchun<br/><span>aqlli qabul tizimi</span></h1>
+  <p>Bemorlar Telegram orqali qabul yozadi. Siz esa — faqat davolaysiz. Eslatmalar, to'lov hisobi va statistika avtomatik.</p>
+  <div class="hero-btns">
+    <a href="#pricing" class="btn-hero">Tariflarni ko'rish</a>
+    <a href="https://t.me/qabulim_support" class="btn-outline" target="_blank">Demo ko'rish</a>
+  </div>
+</section>
+
+<!-- FEATURES -->
+<section class="section">
+  <div class="sec-label">Imkoniyatlar</div>
+  <h2 class="sec-title">Hamma narsa bir joyda</h2>
+  <p class="sec-sub">Klinika uchun zarur bo'lgan barcha funksiyalar avtomatik va tayyor</p>
+  <div class="features">
+    <div class="feat">
+      <div class="feat-icon">📅</div>
+      <h3>Online qabul yozish</h3>
+      <p>Bemorlar Telegram botingiz orqali xizmat tanlaydi, qulay kun va soatni belgilaydi. Siz faqat tasdiqlaysiz.</p>
+    </div>
+    <div class="feat">
+      <div class="feat-icon">🔔</div>
+      <h3>Avtomatik eslatmalar</h3>
+      <p>1 kun, 2 soat va 10 daqiqa oldin bemorga xabar ketadi. Kelmaganlar soni keskin kamayadi.</p>
+    </div>
+    <div class="feat">
+      <div class="feat-icon">💰</div>
+      <h3>To'lov va daromad hisobi</h3>
+      <p>Har bir qabul uchun to'lov holati: to'liq, qisman yoki to'lanmagan. Kunlik va oylik hisobotlar.</p>
+    </div>
+    <div class="feat">
+      <div class="feat-icon">📊</div>
+      <h3>Admin panel</h3>
+      <p>Telefon orqali ishlaydiagan qulay mini app. Qabullar, statistika, daromad — hammasi bitta ekranda.</p>
+    </div>
+    <div class="feat">
+      <div class="feat-icon">⭐</div>
+      <h3>Mijozlar baholovi</h3>
+      <p>Qabul tugagandan so'ng bemor avtomatik ravishda xizmat sifatini baholaydi. Rating va sharhlar to'planadi.</p>
+    </div>
+    <div class="feat">
+      <div class="feat-icon">🏥</div>
+      <h3>Sizning botingiz</h3>
+      <p>Har bir klinikaga alohida Telegram bot. O'z username, o'z brending. Bemorlar faqat sizning botingizni ko'radi.</p>
+    </div>
+  </div>
+</section>
+
+<!-- HOW IT WORKS -->
+<section class="section" style="padding-top:0">
+  <div class="sec-label">Qanday ishlaydi</div>
+  <h2 class="sec-title">4 qadamda boshlang</h2>
+  <p class="sec-sub">Sozlash 10 daqiqa, foyda — doimiy</p>
+  <div class="steps">
+    <div class="step">
+      <div class="step-num">1</div>
+      <h3>Bot token oling</h3>
+      <p>@BotFather orqali klinikangiz uchun alohida Telegram bot yarating</p>
+    </div>
+    <div class="step">
+      <div class="step-num">2</div>
+      <h3>Ro'yxatdan o'ting</h3>
+      <p>Klinika nomi, bot tokeni va admin Telegram ID ni kiriting</p>
+    </div>
+    <div class="step">
+      <div class="step-num">3</div>
+      <h3>Xizmatlar va jadval</h3>
+      <p>Admin paneldan xizmatlar, ish kunlari va soatlarini belgilang</p>
+    </div>
+    <div class="step">
+      <div class="step-num">4</div>
+      <h3>Bemorlarni ulang</h3>
+      <p>Bot linkini ulashing — bemorlar qabul yoza boshlaydi</p>
+    </div>
+  </div>
+</section>
+
+<!-- PRICING -->
+<section class="section" style="padding-top:0" id="pricing">
+  <div class="sec-label">Narxlar</div>
+  <h2 class="sec-title">Shaffof narxlar</h2>
+  <p class="sec-sub">14 kun bepul sinab ko'ring. Keyin siz uchun qulay tarifni tanlang.</p>
+  <div id="pricing-content"><div class="spin"></div></div>
+</section>
+
+<!-- CTA -->
+<section class="cta-section">
+  <h2>Bugunoq sinab ko'ring</h2>
+  <p>14 kun bepul, kredit karta talab qilinmaydi. Istalgan vaqtda bekor qilish mumkin.</p>
+  <a href="https://t.me/qabulim_bot" class="btn-hero" target="_blank" style="font-size:15px;padding:15px 36px">▶ Bepul boshlash</a>
+</section>
+
+<footer>
+  © 2025 Qabulim · Savol va murojaat: <a href="https://t.me/doniyorjon_k">@doniyorjon_k</a>
+</footer>
+
+<script>
+async function loadPricing() {
+  const el = document.getElementById('pricing-content');
+  try {
+    const plans = await fetch('/api/public/pricing').then(r => r.json());
+
+    const trialCard = `<div class="plan-card" style="text-align:center;grid-column:1/-1;max-width:340px;margin:0 auto 4px;width:100%">
+      <div class="plan-name" style="text-align:center">🆓 Sinov davri</div>
+      <div class="plan-price" style="font-size:28px;color:var(--green);text-align:center">Bepul</div>
+      <div class="plan-days" style="text-align:center">14 kun</div>
+      <p style="font-size:13px;color:var(--hint);margin-bottom:20px">Barcha funksiyalar to'liq ochiq. Karta talab qilinmaydi.</p>
+      <a href="https://t.me/qabulim_bot" class="plan-btn" target="_blank">Boshlash</a>
+    </div>`;
+
+    const planCards = plans.map(p => {
+      const perMonth = p.durationDays > 30 ? `~${Math.round(p.price / (p.durationDays / 30)).toLocaleString()} so'm/oy` : null;
+      const bonusHtml = p.bonus
+        ? `<div class="plan-bonus"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l1.68 5.15H19l-4.39 3.19 1.68 5.16L12 12.3l-4.29 3.2 1.68-5.16L5 7.15h5.32z"/></svg>${p.bonus}</div>`
+        : '<div style="height:8px"></div>';
+      return `<div class="plan-card${p.isMostPopular ? ' popular' : ''}">
+        ${p.isMostPopular ? '<div class="plan-badge">⭐ Eng mashhuri</div>' : ''}
+        <div class="plan-name" style="margin-top:${p.isMostPopular ? '8px' : '0'}">${p.name}</div>
+        <div class="plan-price"><sup>so'm</sup>${p.price.toLocaleString()}</div>
+        ${perMonth ? `<div class="plan-per-month">${perMonth}</div>` : '<div style="height:4px"></div>'}
+        <div class="plan-days">⏱ ${p.durationDays} kun</div>
+        ${bonusHtml}
+        <a href="https://t.me/qabulim_bot" class="plan-btn${p.isMostPopular ? '' : ' outline'}" target="_blank">Tanlash</a>
+      </div>`;
+    }).join('');
+
+    el.innerHTML = `<div style="margin-bottom:20px">${trialCard}</div><div class="pricing-wrap">${planCards}</div>`;
+  } catch(e) {
+    el.innerHTML = `<p style="color:var(--hint);text-align:center;padding:32px 0">Narxlarni yuklashda xato. Sahifani yangilang.</p>`;
+  }
+}
+
+loadPricing();
+</script>
+</body>
+</html>
