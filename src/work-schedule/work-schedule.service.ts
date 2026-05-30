@@ -49,7 +49,24 @@ export class WorkScheduleService {
 
   async saveWorkDays(clinicId: number, days: number[]): Promise<void> {
     const schedule = await this.get(clinicId);
-    await this.repo.update(schedule.id, { workDays: days });
+    const oldDays = schedule.workDays || [];
+    const addedDows = days.filter((d) => !oldDays.includes(d));
+    const removedDows = oldDays.filter((d) => !days.includes(d));
+
+    const dowOf = (ds: string) => {
+      const d = new Date(ds);
+      return d.getDay() === 0 ? 7 : d.getDay();
+    };
+
+    let blockedDates = schedule.blockedDates || [];
+    let extraWorkDates = schedule.extraWorkDates || [];
+
+    if (addedDows.length)
+      blockedDates = blockedDates.filter((ds) => !addedDows.includes(dowOf(ds)));
+    if (removedDows.length)
+      extraWorkDates = extraWorkDates.filter((ds) => !removedDows.includes(dowOf(ds)));
+
+    await this.repo.update(schedule.id, { workDays: days, blockedDates, extraWorkDates });
   }
 
   async saveWorkHours(clinicId: number, hours: string[]): Promise<void> {
