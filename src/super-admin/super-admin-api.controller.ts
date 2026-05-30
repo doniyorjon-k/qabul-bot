@@ -392,12 +392,21 @@ export class SuperAdminApiController {
 
   // ── Broadcast ──────────────────────────────────────────────────────
   @Post('broadcast')
-  async broadcast(@Body() body: { message: string; target?: string }, @Headers('x-init-data') d: string) {
+  async broadcast(
+    @Body() body: { message: string; target?: string; clinicIds?: number[] },
+    @Headers('x-init-data') d: string,
+  ) {
     this.validate(d);
     if (!body.message) throw new BadRequestException('message required');
     let clinics = await this.clinicsService.findAll();
-    if (body.target === 'active') clinics = clinics.filter((c) => c.status === 'active');
-    else if (body.target === 'trial') clinics = clinics.filter((c) => c.status === 'trial');
+    if (body.target === 'custom' && body.clinicIds?.length) {
+      const ids = new Set(body.clinicIds);
+      clinics = clinics.filter((c) => ids.has(c.id));
+    } else if (body.target === 'active') {
+      clinics = clinics.filter((c) => c.status === 'active');
+    } else if (body.target === 'trial') {
+      clinics = clinics.filter((c) => c.status === 'trial');
+    }
     let sent = 0;
     for (const clinic of clinics) {
       for (const adminId of clinic.adminIds) {

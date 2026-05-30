@@ -58,6 +58,9 @@ interface AdminSession {
   broadcastText?: string;
   broadcastPhotoId?: string;
   broadcastCustomButtons?: any[][];
+  broadcastTargetMode?: 'all' | 'select';
+  broadcastSelectedIds?: number[];
+  broadcastUserPage?: number;
   step?: string;
   editId?: number;
   tempText?: string;
@@ -731,13 +734,99 @@ export function setupBotHandlers(
   });
 
   // ── Broadcast ─────────────────────────────────────────────────────
+  const BC_PAGE = 8;
+
+  const renderUserPicker = async (ctx: any, allUsers: any[], selectedIds: number[], page: number) => {
+    const totalPages = Math.ceil(allUsers.length / BC_PAGE) || 1;
+    const pageUsers = allUsers.slice(page * BC_PAGE, (page + 1) * BC_PAGE);
+    const rows: any[][] = pageUsers.map((u) => {
+      const sel = selectedIds.includes(u.telegramId);
+      const label = (u.fullName || u.username || `#${u.telegramId}`).slice(0, 30);
+      return [Markup.button.callback(`${sel ? '✅' : '⬜'} ${label}`, `adm:bc:sel:${u.telegramId}`)];
+    });
+    if (totalPages > 1) {
+      const nav: any[] = [];
+      if (page > 0) nav.push(Markup.button.callback('◀️', `adm:bc:pg:${page - 1}`));
+      nav.push(Markup.button.callback(`${page + 1} / ${totalPages}`, 'adm:noop'));
+      if (page < totalPages - 1) nav.push(Markup.button.callback('▶️', `adm:bc:pg:${page + 1}`));
+      rows.push(nav);
+    }
+    const doneLabel = selectedIds.length ? `✅ Tayyor (${selectedIds.length} ta tanlandi)` : '⬜ Hech kim tanlanmagan';
+    rows.push([Markup.button.callback(doneLabel, selectedIds.length ? 'adm:bc:done_sel' : 'adm:noop')]);
+    rows.push([Markup.button.callback('❌ Bekor qilish', 'adm:bc:cancel')]);
+    const selLine = selectedIds.length ? `\n✅ Tanlangan: *${selectedIds.length}* ta` : '';
+    await ctx.editMessageText(
+      `📋 *Foydalanuvchilarni tanlang:*${selLine}\n\nSahifa ${page + 1} / ${totalPages}`,
+      { parse_mode: 'Markdown', ...Markup.inlineKeyboard(rows) },
+    );
+  };
+
   bot.action('adm:broadcast', async (ctx) => {
     await ctx.answerCbQuery();
     if (!isAdmin(ctx.from.id)) return;
     const userCount = await services.usersService.count(clinicId);
-    setASess(ctx.from.id, { broadcastStep: 'enter_text' });
+    setASess(ctx.from.id, { broadcastStep: 'mode', broadcastSelectedIds: [], broadcastUserPage: 0 });
     await ctx.editMessageText(
-      `📢 *Foydalanuvchilarga xabar yuborish*\n\n👥 Jami: *${userCount}* ta\n\nXabarni yozing:`,
+      `📢 *Xabar yuborish*\n\n👥 Jami: *${userCount}* ta foydalanuvchi\n\nKimga yuborilsin?`,
+      {
+        parse_mode: 'Markdown',
+        ...Markup.inlineKeyboard([
+          [Markup.button.callback('👥 Hammaga', 'adm:bc:all')],
+          [Markup.button.callback('✋ Ayrimlarga tanlash', 'adm:bc:pg:0')],
+          [Markup.button.callback('❌ Bekor qilish', 'adm:bc:cancel')],
+        ]),
+      },
+    );
+  });
+
+  bot.action('adm:bc:all', async (ctx) => {
+    await ctx.answerCbQuery();
+    if (!isAdmin(ctx.from.id)) return;
+    const userCount = await services.usersService.count(clinicId);
+    const sess = getASess(ctx.from.id) || {};
+    sess.broadcastTargetMode = 'all';
+    sess.broadcastStep = 'enter_text';
+    setASess(ctx.from.id, sess);
+    await ctx.editMessageText(
+      `📢 *Hammaga xabar yuborish*\n\n👥 *${userCount}* ta foydalanuvchi\n\nXabarni yozing (matn yoki rasm+caption):`,
+      { parse_mode: 'Markdown', ...Markup.inlineKeyboard([[Markup.button.callback('❌ Bekor qilish', 'adm:bc:cancel')]]) },
+    );
+  });
+
+  bot.action(/adm:bc:pg:(\d+)/, async (ctx) => {
+    await ctx.answerCbQuery();
+    if (!isAdmin(ctx.from.id)) return;
+    const page = parseInt((ctx.match as RegExpExecArray)[1]);
+    const sess = getASess(ctx.from.id) || {};
+    sess.broadcastStep = 'select_users';
+    sess.broadcastTargetMode = 'select';
+    sess.broadcastUserPage = page;
+    setASess(ctx.from.id, sess);
+    const allUsers = await services.usersService.findAll(clinicId);
+    await renderUserPicker(ctx, allUsers, sess.broadcastSelectedIds || [], page);
+  });
+
+  bot.action(/adm:bc:sel:(-?\d+)/, async (ctx) => {
+    await ctx.answerCbQuery();
+    if (!isAdmin(ctx.from.id)) return;
+    const tgId = parseInt((ctx.match as RegExpExecArray)[1]);
+    const sess = getASess(ctx.from.id) || {};
+    const sel = sess.broadcastSelectedIds || [];
+    sess.broadcastSelectedIds = sel.includes(tgId) ? sel.filter((id) => id !== tgId) : [...sel, tgId];
+    setASess(ctx.from.id, sess);
+    const allUsers = await services.usersService.findAll(clinicId);
+    await renderUserPicker(ctx, allUsers, sess.broadcastSelectedIds, sess.broadcastUserPage || 0);
+  });
+
+  bot.action('adm:bc:done_sel', async (ctx) => {
+    await ctx.answerCbQuery();
+    if (!isAdmin(ctx.from.id)) return;
+    const sess = getASess(ctx.from.id) || {};
+    sess.broadcastStep = 'enter_text';
+    setASess(ctx.from.id, sess);
+    const count = (sess.broadcastSelectedIds || []).length;
+    await ctx.editMessageText(
+      `📢 *Tanlanganlarga xabar yuborish*\n\n✅ Tanlangan: *${count}* ta foydalanuvchi\n\nXabarni yozing (matn yoki rasm+caption):`,
       { parse_mode: 'Markdown', ...Markup.inlineKeyboard([[Markup.button.callback('❌ Bekor qilish', 'adm:bc:cancel')]]) },
     );
   });
@@ -753,7 +842,11 @@ export function setupBotHandlers(
     if (!isAdmin(ctx.from.id)) return;
     const sess = getASess(ctx.from.id);
     if (!sess?.broadcastText && !sess?.broadcastPhotoId) return;
-    const users = await services.usersService.findAll(clinicId);
+    let users = await services.usersService.findAll(clinicId);
+    if (sess.broadcastTargetMode === 'select' && sess.broadcastSelectedIds?.length) {
+      const selSet = new Set(sess.broadcastSelectedIds);
+      users = users.filter((u) => selSet.has(u.telegramId));
+    }
     let sent = 0, failed = 0;
     await ctx.editMessageText(`📤 Yuborilmoqda... (0 / ${users.length})`);
     const botInfo = await bot.telegram.getMe();
@@ -1501,15 +1594,17 @@ export function setupBotHandlers(
         }
         // broadcast
         if (aSess.broadcastStep === 'enter_text') {
-          const userCount = await services.usersService.count(clinicId);
           const msg = ctx.message as any;
           aSess.broadcastText = text;
           aSess.broadcastPhotoId = undefined;
           aSess.broadcastCustomButtons = msg.reply_markup?.inline_keyboard ?? [];
           aSess.broadcastStep = 'confirm';
           setASess(userId, aSess);
+          const targetDesc = aSess.broadcastTargetMode === 'select'
+            ? `✅ *${(aSess.broadcastSelectedIds || []).length}* ta tanlangan foydalanuvchiga`
+            : `👥 *${await services.usersService.count(clinicId)}* ta foydalanuvchiga`;
           await ctx.reply(
-            `📢 *Xabar ko'rinishi:*\n\n${text}\n\n━━━━━━━━━━━━━\n👥 *${userCount}* ta foydalanuvchiga yuboriladi.\nTasdiqlaysizmi?`,
+            `📢 *Xabar ko'rinishi:*\n\n${text}\n\n━━━━━━━━━━━━━\n${targetDesc} yuboriladi.\nTasdiqlaysizmi?`,
             { parse_mode: 'Markdown', ...Markup.inlineKeyboard([[Markup.button.callback('✅ Yuborish', 'adm:bc:confirm')], [Markup.button.callback('❌ Bekor qilish', 'adm:bc:cancel')]]) },
           );
           return;
@@ -1684,15 +1779,17 @@ export function setupBotHandlers(
     const photos: any[] = msg.photo;
     const fileId = photos[photos.length - 1].file_id;
     const caption: string = msg.caption || '';
-    const userCount = await services.usersService.count(clinicId);
     aSess.broadcastPhotoId = fileId;
     aSess.broadcastText = caption;
     aSess.broadcastCustomButtons = msg.reply_markup?.inline_keyboard ?? [];
     aSess.broadcastStep = 'confirm';
     setASess(ctx.from.id, aSess);
+    const targetDesc = aSess.broadcastTargetMode === 'select'
+      ? `✅ *${(aSess.broadcastSelectedIds || []).length}* ta tanlangan foydalanuvchiga`
+      : `👥 *${await services.usersService.count(clinicId)}* ta foydalanuvchiga`;
     const confirmKb = Markup.inlineKeyboard([[Markup.button.callback('✅ Yuborish', 'adm:bc:confirm')], [Markup.button.callback('❌ Bekor qilish', 'adm:bc:cancel')]]);
     await ctx.replyWithPhoto(fileId, { caption: caption || undefined });
-    await ctx.reply(`📷 Rasm *${userCount}* ta foydalanuvchiga yuboriladi.\nTasdiqlaysizmi?`, { parse_mode: 'Markdown', ...confirmKb });
+    await ctx.reply(`📷 Rasm ${targetDesc} yuboriladi.\nTasdiqlaysizmi?`, { parse_mode: 'Markdown', ...confirmKb });
   });
 
   // ── Contact handler ───────────────────────────────────────────────

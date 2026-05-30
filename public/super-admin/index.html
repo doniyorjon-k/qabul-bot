@@ -44,7 +44,10 @@
 
 <div class="hdr">
   <div class="hdr-title">🔐 Super Admin</div>
-  <button class="hdr-btn" onclick="refreshTab()">↻</button>
+  <div style="display:flex;gap:6px">
+    <button class="hdr-btn" onclick="openBroadcastModal()" title="Xabar yuborish">📢</button>
+    <button class="hdr-btn" onclick="refreshTab()">↻</button>
+  </div>
 </div>
 
 <div class="pg">
@@ -663,6 +666,72 @@ async function deletePromo(id) {
     try { await api(`/promos/${id}`,{method:'DELETE'}); showCustomAlert('✅ O\'chirildi'); loadPromos(); }
     catch(e){showCustomAlert('❌ '+e.message);}
   });
+}
+
+// ── BROADCAST ─────────────────────────────────────────────────────────
+let bcSelectedClinics=new Set();
+
+function openBroadcastModal(){
+  bcSelectedClinics=new Set();
+  openModal(`
+    <h3 style="font-size:16px;font-weight:700;margin:12px 0 16px">📢 Xabar yuborish</h3>
+    <textarea id="bc-msg" placeholder="Xabar matni (*qalin*, _kursiv_, Markdown qo'llab-quvvatlanadi)..."
+      style="width:100%;min-height:90px;background:var(--bg3);border:1px solid var(--border);border-radius:12px;padding:12px;color:var(--fg);font-size:14px;resize:vertical;box-sizing:border-box;margin-bottom:14px;outline:none"></textarea>
+    <div style="font-size:12px;color:var(--hint);font-weight:600;margin-bottom:8px">Kimga?</div>
+    <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:14px" id="bc-target-group">
+      ${[
+        ['all','👥 Barcha klinikalar'],
+        ['active','✅ Faqat faol klinikalar'],
+        ['trial','🆓 Faqat sinov davridagilar'],
+        ['custom','✋ Tanlash'],
+      ].map(([val,lbl])=>`
+        <label style="display:flex;align-items:center;gap:10px;cursor:pointer;padding:10px 12px;background:var(--bg3);border-radius:10px;border:1px solid var(--border)">
+          <input type="radio" name="bc-target" value="${val}" ${val==='all'?'checked':''} style="accent-color:var(--btn);width:16px;height:16px;flex-shrink:0" onchange="onBcTargetChange('${val}')">
+          <span style="font-size:14px">${lbl}</span>
+        </label>`).join('')}
+    </div>
+    <div id="bc-clinic-list" style="display:none;margin-bottom:14px;max-height:220px;overflow-y:auto"></div>
+    <button class="btn-g" onclick="sendBroadcast(this)" style="width:100%">📤 Yuborish</button>
+    <button onclick="closeModal()" style="width:100%;background:none;border:none;color:var(--hint);padding:12px;margin-top:6px;font-size:14px;cursor:pointer">Bekor qilish</button>
+  `);
+}
+
+async function onBcTargetChange(val){
+  const listEl=document.getElementById('bc-clinic-list');
+  if(!listEl) return;
+  if(val!=='custom'){ listEl.style.display='none'; return; }
+  listEl.style.display='block';
+  listEl.innerHTML='<div class="spin"></div>';
+  try {
+    const clinics=await api('/clinics');
+    bcSelectedClinics=new Set();
+    const statusLbl={active:'✅ Faol',trial:'🆓 Sinov',expired:'❌ Tugagan',suspended:'⛔ To\'xtatilgan'};
+    listEl.innerHTML=clinics.map(c=>`
+      <label style="display:flex;align-items:center;gap:10px;cursor:pointer;padding:9px 12px;background:var(--bg3);border-radius:10px;border:1px solid var(--border);margin-bottom:6px">
+        <input type="checkbox" value="${c.id}" style="accent-color:var(--btn);width:16px;height:16px;flex-shrink:0" onchange="bcToggleClinic(${c.id},this.checked)">
+        <div style="min-width:0">
+          <div style="font-size:13px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${c.name}</div>
+          <div style="font-size:11px;color:var(--hint)">${statusLbl[c.status]||c.status}</div>
+        </div>
+      </label>`).join('');
+  } catch(e){ listEl.innerHTML=`<p style="color:var(--red);font-size:13px;margin:8px 0">${e.message}</p>`; }
+}
+
+function bcToggleClinic(id,checked){ if(checked) bcSelectedClinics.add(id); else bcSelectedClinics.delete(id); }
+
+async function sendBroadcast(btn){
+  const msg=(document.getElementById('bc-msg').value||'').trim();
+  if(!msg){ showCustomAlert('Xabar matni kiriting'); return; }
+  const target=document.querySelector('input[name="bc-target"]:checked')?.value||'all';
+  if(target==='custom'&&bcSelectedClinics.size===0){ showCustomAlert('Kamida 1 ta klinika tanlang'); return; }
+  const orig=btn.innerHTML; btn.disabled=true;
+  btn.innerHTML='<span class="spin" style="width:14px;height:14px;border-width:2px;margin:0 auto;display:inline-block"></span>';
+  try {
+    const body={message:msg,target};
+    if(target==='custom') body.clinicIds=[...bcSelectedClinics];
+    const res=await api('/broadcast',{method:'POST',body:JSON.stringify(body)});
+    closeModal(); showCustomAlert(`✅ Xabar yuborildi: ${res.sent} ta admin`);
+  } catch(e){ showCustomAlert('❌ '+e.message); btn.disabled=false; btn.innerHTML=orig; }
 }
 
 // ── TABS ──────────────────────────────────────────────────────────────
