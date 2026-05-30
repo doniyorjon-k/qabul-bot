@@ -564,8 +564,8 @@ function calNextMonth(){
 }
 
 async function toggleSpecialDate(ds) {
-  const el=document.getElementById('cal-'+ds); if(!el)return;
-  el.style.opacity='0.4';
+  const el=document.getElementById('cal-'+ds); if(!el||el.dataset.busy)return;
+  el.dataset.busy='1'; el.style.opacity='0.35'; el.style.pointerEvents='none';
   try {
     const res=await api('/schedule/toggle-date',{method:'POST',body:JSON.stringify({date:ds})});
     if(res.isWorking){
@@ -579,8 +579,8 @@ async function toggleSpecialDate(ds) {
     const dow=new Date(ds).getDay()===0?7:new Date(ds).getDay();
     const isWork=(scheduleData.extraWorkDates||[]).includes(ds)||((scheduleData.workDays||[]).includes(dow)&&!(scheduleData.blockedDates||[]).includes(ds));
     el.style.background=isWork?'rgba(48,209,88,.18)':'rgba(255,69,58,.13)';
-    el.style.opacity='1';
-  } catch(e) { el.style.opacity='1'; showCustomAlert('❌ '+e.message); }
+  } catch(e) { showCustomAlert('❌ '+e.message); }
+  finally { el.style.opacity='1'; el.style.pointerEvents=''; delete el.dataset.busy; }
 }
 
 async function loadSettings() {
@@ -674,7 +674,7 @@ function renderSettings() {
     <div>
       <div style="font-size:12px;color:var(--hint);font-weight:600;margin-bottom:8px">Ish soatlari</div>
       <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px" id="hours-grid">${hourChips}</div>
-      <button class="btn-p" onclick="saveHours()">💾 Soatlarni saqlash</button>
+      <button class="btn-p" onclick="saveHours(this)">💾 Soatlarni saqlash</button>
     </div>`;
 
   const calTitle=`${MONTH_UZ[calViewDate.getMonth()]} ${calViewDate.getFullYear()}`;
@@ -707,23 +707,36 @@ function renderSettings() {
 }
 
 async function toggleDay(d) {
+  const el=document.getElementById('day-'+d);
+  if(!el||el.dataset.busy) return;
+  el.dataset.busy='1'; el.style.opacity='0.35'; el.style.pointerEvents='none';
   const days=scheduleData.workDays||[];
   const newDays=days.includes(d)?days.filter(x=>x!==d):[...days,d].sort((a,b)=>a-b);
   try {
     await api('/schedule/days',{method:'PUT',body:JSON.stringify({days:newDays})});
-    scheduleData.workDays=newDays;
-    document.getElementById('day-'+d).classList.toggle('on',newDays.includes(d));
-  } catch(e) { showCustomAlert('❌ '+e.message); }
+    const fresh=await api('/schedule');
+    scheduleData=fresh; pendingHours=[...(fresh.workHours||[])];
+    renderSettings();
+  } catch(e) {
+    el.style.opacity=''; el.style.pointerEvents=''; delete el.dataset.busy;
+    showCustomAlert('❌ '+e.message);
+  }
 }
 function toggleHour(t) {
+  const el=document.getElementById('hour-'+t.replace(':','-'));
+  if(!el||el.dataset.busy) return;
+  el.dataset.busy='1'; el.style.opacity='0.35';
   if(pendingHours.includes(t)) pendingHours=pendingHours.filter(x=>x!==t);
   else pendingHours=[...pendingHours,t].sort();
-  document.getElementById('hour-'+t.replace(':','-')).classList.toggle('on',pendingHours.includes(t));
+  el.classList.toggle('on',pendingHours.includes(t));
+  setTimeout(()=>{ el.style.opacity=''; delete el.dataset.busy; },150);
 }
-async function saveHours() {
+async function saveHours(btn) {
   if(!pendingHours.length){showCustomAlert('Kamida 1 ta soat tanlang');return;}
+  if(btn){btn.disabled=true;btn.innerHTML='<span class="spin" style="width:14px;height:14px;border-width:2px;margin:0 auto;display:block"></span>';}
   try { await api('/schedule/hours',{method:'PUT',body:JSON.stringify({hours:pendingHours})}); scheduleData.workHours=pendingHours; showCustomAlert('✅ Soatlar saqlandi'); }
   catch(e){showCustomAlert('❌ '+e.message);}
+  finally{if(btn){btn.disabled=false;btn.innerHTML='💾 Soatlarni saqlash';}}
 }
 async function saveClinicInfo() {
   const body={name:document.getElementById('cf-name').value.trim(),phone:document.getElementById('cf-phone').value.trim(),address:document.getElementById('cf-address').value.trim(),telegram:document.getElementById('cf-tg').value.trim(),mapsUrl:document.getElementById('cf-maps').value.trim()};
