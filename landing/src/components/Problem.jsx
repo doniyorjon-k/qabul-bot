@@ -14,7 +14,7 @@ const after = [
   { icon: '✓', text: 'Barcha ma\'lumot Telegramda — tartibli, qulay, istalgan joydan' },
   { icon: '✓', text: '24/7 ishlaydi — tunda ham, dam olish kunlarida ham qabul oladi' },
   { icon: '✓', text: 'Eslatmalar avtomatik boradi — bemor unutmaydi, keladi' },
-  { icon: '✓', text: 'Admin panelda statistika — qabullar, xizmatlar, baholash hammasi ko\'rinadi' },
+  { icon: '✓', text: 'Admin panelda daromad va statistika — to\'lovlar, qabullar, baholash hammasi ko\'rinadi' },
 ]
 
 export default function Problem() {

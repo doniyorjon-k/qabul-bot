@@ -1,6 +1,6 @@
 import { useRef } from 'react'
 import Reveal from './Reveal'
-import { Calendar, Bell, LayoutDashboard, Star, Stethoscope, CalendarDays } from 'lucide-react'
+import { Calendar, Bell, LayoutDashboard, Star, Stethoscope, CalendarDays, TrendingUp, ClipboardCheck } from 'lucide-react'
 
 function TiltCard({ children }) {
   const ref = useRef(null)
@@ -40,6 +40,8 @@ const features = [
   { Icon: Star,            color: 'fi-green',   iconColor: '#059669', title: 'Baholash tizimi',        desc: 'Qabul tugagandan so\'ng bemor avtomatik baholashga chaqiriladi. Fikrlar saqlanadi.' },
   { Icon: Stethoscope,     color: 'fi-teal',    iconColor: '#0d9488', title: 'Xizmatlar katalogi',     desc: 'Har bir xizmatga nom va narx qo\'ying. Kerak bo\'lmasa o\'chirib qo\'ying.' },
   { Icon: CalendarDays,    color: 'fi-pink',    iconColor: '#db2777', title: 'Moslashuvchan jadval',   desc: 'Ish kunlari, soatlari, dam olish kunlari va maxsus sana bloklash — to\'liq nazorat.' },
+  { Icon: TrendingUp,      color: 'fi-yellow',  iconColor: '#ca8a04', title: 'Daromad kuzatuvi',       desc: 'Bemor tashrifidan so\'ng to\'lov holati belgilanadi. Oylik daromad va xizmat bo\'yicha hisobotlar Telegram ichida ko\'rinadi.' },
+  { Icon: ClipboardCheck,  color: 'fi-indigo',  iconColor: '#4f46e5', title: 'Tashrif nazorati',       desc: 'Kim keldi, kim kelmadi — avtomatik tekshiriladi. Kelmaganlar xabardor qilinadi va statistikada aks etadi.' },
 ]
 
 export default function Features() {
