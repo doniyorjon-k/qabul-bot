@@ -28,70 +28,136 @@ const TRIAL = {
   featured: false,
 }
 
-const MONTHLY_META = {
-  currency: "so'm",
-  period: 'oyiga / 1 klinika',
-  features: [
-    'Barcha funksiyalar',
-    'Cheksiz qabul va bemor',
-    'Eslatmalar tizimi',
-    'Baholash tizimi',
-    'Admin mini panel',
-    "Texnik qo'llab-quvvatlash",
-  ],
-  cta: 'Boshlash →',
-  btnCls: 'btn-primary',
-  featured: true,
-  badge: 'Eng mashhur',
-}
+const FEATURES_MONTHLY = [
+  'Barcha funksiyalar',
+  'Cheksiz qabul va bemor',
+  'Eslatmalar tizimi',
+  'Baholash tizimi',
+  'Admin mini panel',
+  "Texnik qo'llab-quvvatlash",
+]
 
-const YEARLY_META = {
-  currency: "so'm",
-  period: 'yiliga',
-  features: [
-    'Oylik barcha imkoniyatlar',
-    "Ustuvor qo'llab-quvvatlash",
-    'Yangi funksiyalar birinchi',
-    'Promo va chegirmalar',
-  ],
-  cta: 'Tejab boshlash',
-  btnCls: 'btn-outline',
-  featured: false,
-}
+const FEATURES_SEMI = [
+  'Oylik barcha imkoniyatlar',
+  '🎁 Landing page bepul',
+  "Ustuvor qo'llab-quvvatlash",
+  'Yangi funksiyalar birinchi',
+  'Promo va chegirmalar',
+]
 
-// Static fallback shown while API loads or on failure
+const FEATURES_YEARLY = [
+  'Oylik barcha imkoniyatlar',
+  '🎁 Landing page bepul',
+  "Ustuvor qo'llab-quvvatlash",
+  'Yangi funksiyalar birinchi',
+  'Promo va chegirmalar',
+]
+
+// Static fallback — shown while API loads or on failure
 const STATIC_PLANS = [
   TRIAL,
-  { name: 'Oylik',  price: '99,000',  ...MONTHLY_META },
-  { name: 'Yillik', price: '799,000', oldPrice: '1,188,000', saving: '33% tejash', ...YEARLY_META },
+  {
+    name: 'Oylik', price: '149,000',
+    currency: "so'm", period: 'oyiga / 1 klinika',
+    features: FEATURES_MONTHLY,
+    cta: 'Boshlash', btnCls: 'btn-outline', featured: false,
+  },
+  {
+    name: 'Yarim yillik', price: '699,000',
+    currency: "so'm", period: '6 oyga / 1 klinika',
+    perMonth: '~116,500', saving: '22% tejash',
+    bonus: 'Landing page bepul',
+    features: FEATURES_SEMI,
+    cta: 'Boshlash →', btnCls: 'btn-primary', featured: true, badge: 'Eng mashhur',
+  },
+  {
+    name: 'Yillik', price: '1,190,000',
+    currency: "so'm", period: 'yiliga',
+    perMonth: '~99,200', oldPrice: '1,788,000', saving: '34% tejash',
+    bonus: 'Landing page bepul',
+    features: FEATURES_YEARLY,
+    cta: 'Tejab boshlash', btnCls: 'btn-outline', featured: false,
+  },
 ]
 
 function buildCards(apiPlans) {
-  const monthly = apiPlans.find((p) => p.slug === 'monthly')
-  const yearly  = apiPlans.find((p) => p.slug === 'yearly')
-  return [
-    TRIAL,
-    monthly ? { name: monthly.name, price: fmtPrice(monthly.price), ...MONTHLY_META } : null,
-    yearly && monthly
-      ? {
-          name: yearly.name,
-          price: fmtPrice(yearly.price),
-          oldPrice: fmtPrice(monthly.price * 12),
-          saving: `${Math.round((1 - yearly.price / (monthly.price * 12)) * 100)}% tejash`,
-          ...YEARLY_META,
-        }
-      : null,
-  ].filter(Boolean)
+  const monthly   = apiPlans.find((p) => p.slug === 'monthly')
+  const semi      = apiPlans.find((p) => p.slug === 'semi-yearly')
+  const yearly    = apiPlans.find((p) => p.slug === 'yearly')
+
+  const cards = [TRIAL]
+
+  if (monthly) {
+    cards.push({
+      name: monthly.name,
+      price: fmtPrice(monthly.price),
+      currency: "so'm",
+      period: 'oyiga / 1 klinika',
+      features: FEATURES_MONTHLY,
+      cta: monthly.isMostPopular ? 'Boshlash →' : 'Boshlash',
+      btnCls: monthly.isMostPopular ? 'btn-primary' : 'btn-outline',
+      featured: monthly.isMostPopular,
+      badge: monthly.isMostPopular ? 'Eng mashhur' : null,
+    })
+  }
+
+  if (semi) {
+    const perMonth = Math.round(semi.price / 6)
+    const mPrice = monthly?.price || 0
+    const saving = mPrice ? `${Math.round((1 - semi.price / (mPrice * 6)) * 100)}% tejash` : null
+    cards.push({
+      name: semi.name,
+      price: fmtPrice(semi.price),
+      currency: "so'm",
+      period: '6 oyga / 1 klinika',
+      perMonth: perMonth ? `~${fmtPrice(perMonth)}` : null,
+      saving,
+      bonus: semi.bonus || null,
+      features: semi.bonus
+        ? [`🎁 ${semi.bonus}`, ...FEATURES_SEMI.filter((f) => !f.startsWith('🎁'))]
+        : FEATURES_SEMI,
+      cta: semi.isMostPopular ? 'Boshlash →' : 'Boshlash',
+      btnCls: semi.isMostPopular ? 'btn-primary' : 'btn-outline',
+      featured: semi.isMostPopular,
+      badge: semi.isMostPopular ? 'Eng mashhur' : null,
+    })
+  }
+
+  if (yearly) {
+    const mPrice = monthly?.price || 0
+    const oldPrice = mPrice ? fmtPrice(mPrice * 12) : null
+    const saving = mPrice ? `${Math.round((1 - yearly.price / (mPrice * 12)) * 100)}% tejash` : null
+    const perMonth = Math.round(yearly.price / 12)
+    cards.push({
+      name: yearly.name,
+      price: fmtPrice(yearly.price),
+      currency: "so'm",
+      period: 'yiliga',
+      perMonth: perMonth ? `~${fmtPrice(perMonth)}` : null,
+      oldPrice,
+      saving,
+      bonus: yearly.bonus || null,
+      features: yearly.bonus
+        ? [`🎁 ${yearly.bonus}`, ...FEATURES_YEARLY.filter((f) => !f.startsWith('🎁'))]
+        : FEATURES_YEARLY,
+      cta: yearly.isMostPopular ? 'Boshlash →' : 'Tejab boshlash',
+      btnCls: yearly.isMostPopular ? 'btn-primary' : 'btn-outline',
+      featured: yearly.isMostPopular,
+      badge: yearly.isMostPopular ? 'Eng mashhur' : null,
+    })
+  }
+
+  return cards
 }
 
 export default function Pricing() {
   const [plans, setPlans] = useState(STATIC_PLANS)
 
   useEffect(() => {
-    if (!API_URL) return
-    fetch(`${API_URL}/api/public/pricing`)
+    const url = API_URL ? `${API_URL}/api/public/pricing` : '/api/public/pricing'
+    fetch(url)
       .then((r) => r.json())
-      .then((data) => setPlans(buildCards(data)))
+      .then((data) => { if (Array.isArray(data) && data.length) setPlans(buildCards(data)) })
       .catch(() => {})
   }, [])
 
@@ -118,7 +184,7 @@ export default function Pricing() {
                       <sup>{plan.currency}</sup> {plan.price}
                     </div>
                     <div className="price-period">
-                      {plan.period}
+                      {plan.perMonth ? `${plan.perMonth}/oy · ` : ''}{plan.period}
                       {plan.oldPrice && (
                         <> · <s className="price-old">{plan.oldPrice}</s> — {plan.saving}</>
                       )}
